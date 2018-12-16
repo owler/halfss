@@ -103,20 +103,20 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
     statmt.close()
   }
 
-  def writeAccounts(Accounts: Iterable[Account])(implicit conn: Connection): Unit = {
+  def writeAccounts(accounts: Iterable[Account])(implicit conn: Connection): Unit = {
     val statmt = conn.createStatement()
     val sb = new StringBuffer("INSERT INTO Accounts (id, email, fname, sname, phone, sex, birth, country, city) VALUES ")
       .append(
-        Accounts.map(Account =>
-          new StringBuffer("(").append(Account.id).append(",'")
-            .append(Account.email).append("','")
-            .append(Account.fname).append("','")
-            .append(Account.sname).append("','")
-            .append(Account.phone).append("','")
-            .append(Account.sex).append("',")
-            .append(Account.birth).append(",'")
-            .append(Account.country).append("','")
-            .append(Account.city).append("'")
+        accounts.map(account =>
+          new StringBuffer("(").append(account.id).append(",'")
+            .append(account.email).append("','")
+            .append(account.fname).append("','")
+            .append(account.sname).append("','")
+            .append(account.phone).append("','")
+            .append(account.sex).append("',")
+            .append(account.birth).append(",'")
+            .append(account.country).append("','")
+            .append(account.city).append("'")
             .append(")").toString).mkString(",")
       )
       .append(";")
@@ -169,13 +169,28 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
             } else {
               val updatedAccount = Account(account.id,
                 data.email.getOrElse(account.email),
-                data.fname.getOrElse(account.fname),
-                data.sname.getOrElse(account.sname),
-                data.phone.getOrElse(account.phone),
+                data.fname match {
+                  case Some(v) => data.fname
+                  case None => account.fname
+                },
+                data.sname match {
+                  case Some(v) => data.sname
+                  case None => account.sname
+                },
+                data.phone match {
+                  case Some(v) => data.phone
+                  case None => account.phone
+                },
                 data.sex.getOrElse(account.sex),
                 data.birth.getOrElse(account.birth),
-                data.country.getOrElse(account.country),
-                data.city.getOrElse(account.city)
+                data.country match {
+                  case Some(value) => data.country
+                  case None => account.country
+                },
+                data.city match {
+                  case Some(value) => data.city
+                  case None => account.city
+                }
               )
               deleteObj(updatedAccount.id, "Accounts")
               writeAccounts(List(updatedAccount))
@@ -219,13 +234,13 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
       val account = if (rs.next()) {
         Some(Account(rs.getInt("id"),
           rs.getString("email"),
-          rs.getString("fname"),
-          rs.getString("sname"),
-          rs.getString("phone"),
+          opt(rs.getString("fname")),
+          opt(rs.getString("sname")),
+          opt(rs.getString("phone")),
           rs.getString("sex"),
           rs.getInt("birth"),
-          rs.getString("country"),
-          rs.getString("city")
+          opt(rs.getString("country")),
+          opt(rs.getString("city"))
         ))
       } else {
         None
@@ -235,6 +250,12 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
     }
   }
 
+  def opt(str: String): Option[String] = {
+    str match {
+      case s if s != null => Some(s)
+      case _ => None
+    }
+  }
   private def getAccounts(sql: String)(implicit mc: MarkerContext): Option[Map[Int, Account]] = {
     val statmt = conn.createStatement()
     val rs = statmt.executeQuery(sql)
@@ -244,13 +265,13 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
       val id = rs.getInt("id")
       map += id -> Account(id,
         rs.getString("email"),
-        rs.getString("fname"),
-        rs.getString("sname"),
-        rs.getString("phone"),
+        opt(rs.getString("fname")),
+        opt(rs.getString("sname")),
+        opt(rs.getString("phone")),
         rs.getString("sex"),
         rs.getInt("birth"),
-        rs.getString("country"),
-        rs.getString("city")
+        opt(rs.getString("country")),
+        opt(rs.getString("city"))
       )
     }
     statmt.close()

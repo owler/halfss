@@ -75,7 +75,9 @@ class PostResourceHandler @Inject()(
   }
 
   def verify(u:  Account): Boolean = {
-    u.id >= 0 && u.email.length <= 100 && u.fname.length <= 50 && u.sname.length <= 50 && (u.sex == "m" || u.sex == "f")
+    u.id >= 0 && u.email.length <= 100 &&
+      u.fname.map(_.length <= 50).getOrElse(true) &&
+      u.sname.map(_.length <= 50).getOrElse(true) && (u.sex == "m" || u.sex == "f")
   }
 
 

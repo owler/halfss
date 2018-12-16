@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PS SCAN</title>
+    <meta charset="utf-8">
+    <link href="styles/kendo.common.min.css" rel="stylesheet">
+    <link href="styles/kendo.rtl.min.css" rel="stylesheet">
+    <link href="styles/kendo.default.min.css" rel="stylesheet">
+    <link href="styles/kendo.default.mobile.min.css" rel="stylesheet">
+    <script src="js/jquery.min.js"></script>
+    <script src="js/jszip.min.js"></script>
+    <script src="js/kendo.all.min.js"></script>
+    <style>
+        .k-grid {
+            font-size: 12px;
+        }
+
+        .k-grid tbody tr {
+            height: 22px;
+        }
+
+        .k-grid td {
+            white-space: nowrap;
+            padding: 2px;
+        }
+
+        .km-widget.km-buttongroup {
+            margin: 0 auto;
+        }
+
+        .k-highcontrast .k-button-group .k-button {
+            background-color: rgb(44, 35, 43);
+        }
+    </style>
+</head>
+<body>
+
+<div class="demo-section k-content" align="center">
+    <table>
+        <tr>
+            <td>
+                <ul id="select-period">
+                    <li>MEM</li>
+                    <li>CPU</li>
+                    <li>RSS</li>
+                </ul>
+            </td>
+            <td>
+                <input id="datepicker" value="10/10/2011" title="datepicker"/>
+            </td>
+        </tr>
+    </table>
+</div>
+<div id="chartW"></div>
+<div id="grid"></div>
+
+<script>
+    var date = kendo.toString(new Date(), 'd');
+    var statType = "MEM";
+    var window2 = $("#chartW");
+
+    $(document).ready(function () {
+        function onChange() {
+            date = kendo.toString(this.value(), 'd');
+            $("#grid").data("kendoGrid").destroy();
+            $("#grid").empty();
+            reloadGrid(statType, date);
+        }
+
+        $("#grid").on("dblclick", function (e) {
+            var grid = $("#grid").data("kendoGrid");
+            var model = grid.dataItem($(e.target).closest("tr"));
+            showChart(date, model.PID);
+        });
+
+        $("#datepicker").kendoDatePicker({
+            change: onChange
+        });
+
+        $("#datepicker").data("kendoDatePicker").value(new Date())
+
+        var initWindow = function () {
+            var windowOptions = {
+                width: "1200px",
+                height: "600px",
+                title: "Chart",
+                modal: true,
+                visible: false
+            };
+
+            window2 = $("#chartW").kendoWindow(windowOptions).data("kendoWindow");
+        };
+        initWindow();
+    });
+
+    $(function () {
+        $("#select-period").kendoMobileButtonGroup({
+            select: function (e) {
+                statType = this.current().text();
+                $("#grid").data("kendoGrid").destroy();
+                $("#grid").empty();
+                reloadGrid(statType, date);
+            },
+            index: 0
+        });
+    });
+
+    var isDateField = [];
+    reloadGrid(statType, date);
+
+    function reloadGrid(statType, date) {
+        $.ajax({
+            url: "/search",
+            cache: false,
+            data: {
+                statType: statType,
+                date: date
+            },
+            dataType: "jsonp",
+            success: function (result) {
+                generateGrid(result);
+            },
+            error: function (xhr, error, t) {
+                alert(t)
+                console.debug(xhr);
+                console.debug(error);
+            }
+        });
+    }
+
+    function generateGrid(response) {
+        var model = generateModel(response);
+        var columns = generateColumns(response);
+        var grid = $("#grid").kendoGrid({
+            dataSource: {
+                transport: {
+                    read: function (options) {
+                        options.success(response.data);
+                    }
+                },
+                pageSize: 25,
+                schema: {
+                    model: model
+                }
+            },
+
+            columns: columns,
+            sortable: true,
+            pageable: true,
+            resizable: true,
+            editable: false,
+            selectable: true,
+            filterable: {
+                extra: false,
+                operators: {
+                    string: {
+                        contains: "Contains",
+                        eq: "Is equal to",
+                        neq: "Is not equal to"
+                    }
+                }
+            }
+        });
+    }
+
+    function showChart(date, pid) {
+        window2.content("<div class=\"demo-section k-content wide\"><div id=\"chart\"></div></div>");
+        window2.open().center();
+        createChart(date, pid)
+    }
+
+    function generateColumns(response) {
+        var columnNames = response["columns"];
+        return columnNames.map(function (name) {
+            if (name === "PID") {
+                return {field: name, width: 165, format: (isDateField[name] ? "{0:D}" : "")};
+            } else {
+                return {
+                    field: name,
+                    title: name.replace("h", "").replace("m", ":"),
+                    width: 45,
+                    minResizableWidth: 45,
+                    format: (isDateField[name] ? "{0:D}" : ""),
+                    filterable: false
+                };
+            }
+        })
+    }
+
+    function generateModel(response) {
+
+        var sampleDataItem = response["data"][0];
+
+        var model = {};
+        var fields = {};
+        for (var property in sampleDataItem) {
+            if (property.indexOf("ID") !== -1) {
+                model["id"] = property;
+            }
+            var propType = typeof sampleDataItem[property];
+
+            if (propType === "number") {
+                fields[property] = {
+                    type: "number",
+                    validation: {
+                        required: true
+                    }
+                };
+                if (model.id === property) {
+                    fields[property].editable = false;
+                    fields[property].validation.required = false;
+                }
+            } else if (propType === "boolean") {
+                fields[property] = {
+                    type: "boolean"
+                };
+            } else if (propType === "string") {
+                var parsedDate = kendo.parseDate(sampleDataItem[property]);
+                if (parsedDate) {
+                    fields[property] = {
+                        type: "date",
+                        validation: {
+                            required: true
+                        }
+                    };
+                    isDateField[property] = true;
+                } else {
+                    fields[property] = {
+                        validation: {
+                            required: true
+                        }
+                    };
+                }
+            } else {
+                fields[property] = {
+                    validation: {
+                        required: true
+                    }
+                };
+            }
+        }
+
+        model.fields = fields;
+
+        return model;
+    }
+
+    function createChart(date, pid) {
+        $("#chart").kendoChart({
+            dataSource: {
+                transport: {
+                    read: {
+                        url: "chart?date=" + date + "&selectedPid=" + pid,
+                        dataType: "json"
+                    }
+                },
+                sort: {
+                    field: "time",
+                    dir: "asc"
+                }
+            },
+            title: {
+                text: "Chart for pid " + pid
+            },
+            legend: {
+                position: "top"
+            },
+            seriesDefaults: {
+                type: "line"
+            },
+            series: [{
+                field: "MEM",
+                name: "MEM"
+            }, {
+                field: "CPU",
+                name: "CPU"
+            }],
+            categoryAxis: {
+                field: "time",
+                labels: {
+                    rotation: -90
+                },
+                crosshair: {
+                    visible: true
+                }
+            },
+            valueAxis: {
+                labels: {
+                    format: "N0"
+                },
+                majorUnit: 10
+            },
+            tooltip: {
+                visible: true,
+                shared: true,
+                format: "N0"
+            }
+        });
+    }
+
+</script>
+
+</body>
+</html>

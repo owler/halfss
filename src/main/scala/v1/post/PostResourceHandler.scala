@@ -39,7 +39,7 @@ class PostResourceHandler @Inject()(
 
 
   def updateAccount(id: Int, json: JsValue)(implicit mc: MarkerContext): Future[Result] = {
-    if (isNullField(json, List("email", "fname", "sname", "sex", "birth"))) {
+    if (isNullField(json, List("email", "sex", "birth"))) {
       Future {
         Results.BadRequest
       }

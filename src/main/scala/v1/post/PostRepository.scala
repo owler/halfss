@@ -139,7 +139,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
             } else {
               Results.BadRequest
             }
-          case Some(Account) => Results.BadRequest
+          case Some(map) => Results.BadRequest
         }
       }
     }
@@ -255,4 +255,4 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
 
 
   val sqlAccount = "SELECT id, email, fname, sname, phone, sex, birth, country, city from Accounts WHERE id="
-}
+ }

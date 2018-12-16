@@ -41,12 +41,15 @@ trait PostRepository {
   */
 @Singleton
 class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends PostRepository {
-
-  private val logger = Logger(this.getClass)
-  val rootzip = new java.util.zip.ZipFile("/tmp/data/data1.zip")
-  val now = Source.fromFile("/tmp/data/options.txt").getLines.toList.head.toLong * 1000
-  println("data.zip timestamp " + new Date(now))
   import scala.collection.JavaConverters._
+  private val logger = Logger(this.getClass)
+  val rootzip = new java.util.zip.ZipFile("/tmp/data/data.zip")
+  var now = 0L//Source.fromFile("/tmp/data/options.txt").getLines.toList.head.toLong * 1000
+  rootzip.entries.asScala.filter(_.getName.contains("options")).foreach(e=>
+    now = Source.fromInputStream(rootzip.getInputStream(e)).getLines.toList.head.toLong * 1000
+  )
+  println("data.zip timestamp " + new Date(now))
+
 
   //val dbUrl = "jdbc:sqlite:/tmp/data/travel.db"
   val dbUrl = "jdbc:sqlite::memory:"
@@ -56,8 +59,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
   loadDb()
   createIndex()
   private val end = System.currentTimeMillis()
-  println("All data loaded in " + (end - start) / 1000 + "s. Accounts: " + getCount("Accounts")
-    + " Visits: " + getCount("visits") + " Locations: " + getCount("locations"))
+  println("All data loaded in " + (end - start) / 1000 + "s. Accounts: " + getCount("Accounts"))
   System.gc()
 
   import java.sql.SQLException
@@ -72,13 +74,14 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
   }
 
   def loadDb() = {
+
     rootzip.entries.asScala.
       filter(_.getName.endsWith(".json")).
       foreach { e =>
         println(e.getName)
         val json: JsValue = Json.parse(rootzip.getInputStream(e))
         e match {
-          case _ if e.getName.contains("Accounts") =>
+          case _ if e.getName.contains("accounts") =>
             val Accounts: Reads[Seq[Account]] = (JsPath \ "Accounts").read[Seq[Account]]
             json.validate[Seq[Account]](Accounts) match {
               case s: JsSuccess[Seq[Account]] => writeAccounts(s.get)
@@ -212,18 +215,22 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
     Future {
       val statmt = conn.createStatement()
       val rs = statmt.executeQuery(sqlAccount + id)
-      val Account = if (rs.next()) {
+      val account = if (rs.next()) {
         Some(Account(rs.getInt("id"),
           rs.getString("email"),
-          rs.getString("first_name"),
-          rs.getString("last_name"),
-          rs.getString("gender"),
-          rs.getInt("birth_date")))
+          rs.getString("fname"),
+          rs.getString("sname"),
+          rs.getString("phone"),
+          rs.getString("sex"),
+          rs.getInt("birth"),
+          rs.getString("country"),
+          rs.getString("city")
+        ))
       } else {
         None
       }
       statmt.close()
-      Account
+      account
     }
   }
 

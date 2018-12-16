@@ -51,9 +51,10 @@ class AccountController @Inject()(cc: PostControllerComponents)(implicit ec: Exe
   private val logger = Logger(getClass)
 
   def filter: Action[AnyContent] = PostAction.async { implicit request =>
-    Future {
-      Ok(Json.obj())
-    }
+
+    postResourceHandler.filter(null).map(
+      l => Ok(Json.toJson(l))
+    )
   }
 
   def create: Action[AnyContent] = PostAction.async { implicit request =>

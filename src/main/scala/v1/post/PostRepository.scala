@@ -30,6 +30,8 @@ trait PostRepository {
   def updateAccount(id: Int, data: AccountPost)(implicit mc: MarkerContext): Future[Result]
 
   def getAccount(id: Int)(implicit mc: MarkerContext): Future[Option[Account]]
+
+  def filter(list: List[String])(implicit mc: MarkerContext): Future[List[Account]]
 }
 
 /**
@@ -282,6 +284,16 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
     }
   }
 
+  val sqlAccountWhere = "SELECT id, email, fname, sname, phone, sex, birth, country, city from Accounts WHERE "
+  val sqlAccount = sqlAccountWhere + "id="
 
-  val sqlAccount = "SELECT id, email, fname, sname, phone, sex, birth, country, city from Accounts WHERE id="
- }
+
+  override def filter(list: List[String])(implicit mc: MarkerContext): Future[List[Account]] = {
+    Future {
+      getAccounts(sqlAccountWhere + list.mkString(" AND ")) match {
+        case Some(map) => map.values.toList
+        case None => List()
+      }
+    }
+  }
+}

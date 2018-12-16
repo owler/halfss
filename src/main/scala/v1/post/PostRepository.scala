@@ -43,7 +43,8 @@ trait PostRepository {
 class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends PostRepository {
   import scala.collection.JavaConverters._
   private val logger = Logger(this.getClass)
-  val rootzip = new java.util.zip.ZipFile("/tmp/data/data.zip")
+  //val rootzip = new java.util.zip.ZipFile("/tmp/data/data.zip")
+  val rootzip = new java.util.zip.ZipFile("data.zip")
   var now = 0L//Source.fromFile("/tmp/data/options.txt").getLines.toList.head.toLong * 1000
   rootzip.entries.asScala.filter(_.getName.contains("options")).foreach(e=>
     now = Source.fromInputStream(rootzip.getInputStream(e)).getLines.toList.head.toLong * 1000
@@ -82,7 +83,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
         val json: JsValue = Json.parse(rootzip.getInputStream(e))
         e match {
           case _ if e.getName.contains("accounts") =>
-            val Accounts: Reads[Seq[Account]] = (JsPath \ "Accounts").read[Seq[Account]]
+            val Accounts: Reads[Seq[Account]] = (JsPath \ "accounts").read[Seq[Account]]
             json.validate[Seq[Account]](Accounts) match {
               case s: JsSuccess[Seq[Account]] => writeAccounts(s.get)
               case e: JsError =>

@@ -1,1 +1,18 @@
 https://stackoverflow.com/questions/6724679/how-to-match-a-string-on-a-prefix-and-get-the-rest
+
+trait Mstr {
+  def prefix: String
+  def unapply(str: String): Option[String] = {
+    str match {
+      case s if s.endsWith(prefix) => Some(s.stripSuffix(prefix))
+      case _ => None
+    }
+  }
+}
+
+object Eq extends Mstr {
+  override def prefix: String = "_eq"
+}
+object Gt extends Mstr {
+  override def prefix: String = "_gt"
+}

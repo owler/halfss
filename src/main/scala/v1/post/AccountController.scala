@@ -51,40 +51,8 @@ class AccountController @Inject()(cc: PostControllerComponents)(implicit ec: Exe
   private val logger = Logger(getClass)
 
   def filter: Action[AnyContent] = PostAction.async { implicit request =>
-    val start = System.currentTimeMillis()
-    if (!verifyIntParameter("birth", request) ||
-      !verifyGenderParameter("sex_eq", request)) {
-      Future {
-        BadRequest
-      }
-    } else {
-
-      postResourceHandler.lookupLocationAvg(id).map {
-        case None => NotFound
-        case Some(visits1) => {
-          var visits = request.getQueryString("fromDate") match {
-            case None => visits1
-            case Some(str) => visits1.filter(_.visit.visited_at > str.toInt)
-          }
-          visits = request.getQueryString("toDate") match {
-            case None => visits
-            case Some(str) => visits.filter(_.visit.visited_at < str.toInt)
-          }
-          visits = request.getQueryString("gender") match {
-            case None => visits
-            case Some(str) => visits.filter(_.user.gender == str)
-          }
-          visits = request.getQueryString("fromAge") match {
-            case None => visits
-            case Some(str) => visits.filter(_.user.birth_date < postResourceHandler.relativeTimeStamp(str.toInt))
-          }
-          visits = request.getQueryString("toAge") match {
-            case None => visits
-            case Some(str) => visits.filter(_.user.birth_date > postResourceHandler.relativeTimeStamp(str.toInt))
-          }
-          Ok(Json.obj("avg" -> Math.round(100000 * (visits.map(v => v.visit.mark).sum.toDouble / visits.size)).toDouble / 100000))
-        }
-      }
+    Future {
+      Ok(Json.obj())
     }
   }
 
@@ -110,7 +78,7 @@ class AccountController @Inject()(cc: PostControllerComponents)(implicit ec: Exe
   def suggest(id: Int): Action[AnyContent] = PostAction.async { implicit request =>
     val start = System.currentTimeMillis()
     try {
-      postResourceHandler.lookupUser(id).map {
+      postResourceHandler.lookupAccount(id).map {
         case None => NotFound
         case Some(user) => Ok(Json.toJson(user))
       }
@@ -122,46 +90,17 @@ class AccountController @Inject()(cc: PostControllerComponents)(implicit ec: Exe
 
 
   def recommend(id: Int): Action[AnyContent] = PostAction.async { implicit request =>
-    val start = System.currentTimeMillis()
-    try {
-      if (!verifyParameter("fromDate", request) ||
-        !verifyParameter("toDate", request) ||
-        !verifyParameter("toDistance", request) ||
-        !verifyStringParameter("country", request)) {
-        Future {
-          BadRequest
-        }
-      } else {
-        postResourceHandler.lookupVisitsByUserId(id).map {
-          case None => NotFound
-          case Some(visits1) => {
-            var visits = request.getQueryString("fromDate") match {
-              case None => visits1
-              case Some(str) => visits1.filter(_.visit.visited_at > str.toInt)
-            }
-            visits = request.getQueryString("toDate") match {
-              case None => visits
-              case Some(str) => visits.filter(_.visit.visited_at < str.toInt)
-            }
-            visits = request.getQueryString("toDistance") match {
-              case None => visits
-              case Some(str) => visits.filter(_.location.distance < str.toInt)
-            }
-            visits = request.getQueryString("country") match {
-              case None => visits
-              case Some(str) => visits.filter(_.location.country == str)
-            }
-            Ok(Json.obj("visits" -> visits.toList.sortBy(_.visit.visited_at)))
-          }
-        }
-      }
-    } finally {
-      val delay = System.currentTimeMillis() - start
-      if (delay > 100) println("visits for user " + id + " takes ms: " + delay)
+    postResourceHandler.lookupAccount(id).map {
+      case None => NotFound
+      case Some(account) => Ok(Json.toJson(account))
     }
   }
 
 
-  def group: Handler = ???
+  def group: Action[AnyContent] = PostAction.async { implicit request =>
+    Future {
+      Ok(Json.obj())
+    }
+  }
 
 }

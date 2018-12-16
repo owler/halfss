@@ -79,7 +79,7 @@ class PostResourceHandler @Inject()(
   }
 
 
-  def lookupUser(id: Int)(implicit mc: MarkerContext): Future[Option[Account]] = {
+  def lookupAccount(id: Int)(implicit mc: MarkerContext): Future[Option[Account]] = {
     postRepository.getAccount(id)
   }
 

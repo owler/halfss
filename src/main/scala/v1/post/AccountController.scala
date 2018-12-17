@@ -51,7 +51,8 @@ class AccountController @Inject()(cc: PostControllerComponents)(implicit ec: Exe
   private val logger = Logger(getClass)
 
   def filter: Action[AnyContent] = PostAction.async { implicit request =>
-    val list = request.queryString.filterNot(_._1 == "query_id").map(l => l._1 match {
+    val limit = request.getQueryString("limit").map(_.toInt)
+    val list = request.queryString.filterNot(x => x._1 == "query_id" || x._1 == "limit").map(l => l._1 match {
         case Eq(name) => name + "='" + l._2.head + "'"
         case Lt(name) if name == "birth" => name + "<" + l._2.head
         case Lt(name) => name + "<'" + l._2.head + "'"
@@ -64,7 +65,8 @@ class AccountController @Inject()(cc: PostControllerComponents)(implicit ec: Exe
         BadRequest
       }
     } else {
-      postResourceHandler.filter(list).map(
+
+      postResourceHandler.filter(list, limit).map(
         l => Ok(Json.toJson(l))
       )
     }

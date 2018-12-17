@@ -57,7 +57,7 @@ class AccountController @Inject()(cc: PostControllerComponents)(implicit ec: Exe
         case Lt(name) => name + "<'" + l._2.head + "'"
         case Gt(name) if name == "birth" => name + ">" + l._2.head
         case Gt(name) => name + ">'" + l._2.head + "'"
-
+        case _ => null
     })
     postResourceHandler.filter(list).map(
       l => Ok(Json.toJson(l))

@@ -111,19 +111,26 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
       .append(
         accounts.map(account =>
           new StringBuffer("(").append(account.id).append(",'")
-            .append(account.email).append("','")
-            .append(account.fname).append("','")
-            .append(account.sname).append("','")
-            .append(account.phone).append("','")
+            .append(account.email).append("',")
+            .append(unwrap(account.fname)).append(",")
+            .append(unwrap(account.sname)).append(",")
+            .append(unwrap(account.phone)).append(",'")
             .append(account.sex).append("',")
-            .append(account.birth).append(",'")
-            .append(account.country).append("','")
-            .append(account.city).append("'")
+            .append(account.birth).append(",")
+            .append(unwrap(account.country)).append(",")
+            .append(unwrap(account.city)).append("")
             .append(")").toString).mkString(",")
       )
       .append(";")
     statmt.execute(sb.toString)
     statmt.close()
+  }
+
+  def unwrap(str: Option[String]): String = {
+    str match {
+      case Some(v) => "'" + v + "'"
+      case None => null
+    }
   }
 
   def deleteObj(id: Int, table: String): Unit = {

@@ -31,7 +31,7 @@ trait PostRepository {
 
   def getAccount(id: Int)(implicit mc: MarkerContext): Future[Option[Account]]
 
-  def filter(list: List[String])(implicit mc: MarkerContext): Future[List[Account]]
+  def filter(list: Iterable[String])(implicit mc: MarkerContext): Future[List[Account]]
 }
 
 /**
@@ -288,7 +288,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
   val sqlAccount = sqlAccountWhere + "id="
 
 
-  override def filter(list: List[String])(implicit mc: MarkerContext): Future[List[Account]] = {
+  override def filter(list: Iterable[String])(implicit mc: MarkerContext): Future[List[Account]] = {
     Future {
       getAccounts(sqlAccountWhere + list.mkString(" AND ")) match {
         case Some(map) => map.values.toList

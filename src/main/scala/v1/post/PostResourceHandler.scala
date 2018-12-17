@@ -80,7 +80,7 @@ class PostResourceHandler @Inject()(
       u.sname.map(_.length <= 50).getOrElse(true) && (u.sex == "m" || u.sex == "f")
   }
 
-  def filter(list: List[String])(implicit mc: MarkerContext): Future[List[Account]] = {
+  def filter(list: Iterable[String])(implicit mc: MarkerContext): Future[List[Account]] = {
     postRepository.filter(list)
   }
 

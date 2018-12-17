@@ -60,7 +60,7 @@ class AccountController @Inject()(cc: PostControllerComponents)(implicit ec: Exe
         case Gt(name) => name + ">'" + l._2.head + "'"
         case _ => null
     })
-    if (list.filter(_ == null).size > 0) {
+    if (list.exists(_ == null)) {
       Future{
         BadRequest
       }

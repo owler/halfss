@@ -19,7 +19,8 @@ final case class AccountPost(email: Option[String], fname: Option[String], sname
 
 object Account {
 
-  implicit val implicitWrites = new Writes[Account] {
+  implicit val writes = Json.writes[Account]
+ /* implicit val implicitWrites = new Writes[Account] {
     def writes(post: Account): JsValue = {
       Json.obj(
         "id" -> post.id,
@@ -33,7 +34,7 @@ object Account {
         "city" -> post.city
       )
     }
-  }
+  }*/
 
   implicit val implicitRead : Reads[Account] = (
     (JsPath \ "id").read[Int] and

@@ -243,13 +243,13 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
       val account = if (rs.next()) {
         Some(Account(rs.getInt("id"),
           rs.getString("email"),
-          opt(rs.getString("fname")),
-          opt(rs.getString("sname")),
-          opt(rs.getString("phone")),
+          Option(rs.getString("fname")),
+          Option(rs.getString("sname")),
+          Option(rs.getString("phone")),
           rs.getString("sex"),
           rs.getInt("birth"),
-          opt(rs.getString("country")),
-          opt(rs.getString("city"))
+          Option(rs.getString("country")),
+          Option(rs.getString("city"))
         ))
       } else {
         None
@@ -259,12 +259,6 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
     }
   }
 
-  def opt(str: String): Option[String] = {
-    str match {
-      case s if s != null => Some(s)
-      case _ => None
-    }
-  }
   private def getAccounts(sql: String)(implicit mc: MarkerContext): Option[Map[Int, Account]] = {
     val statmt = conn.createStatement()
     val rs = statmt.executeQuery(sql)

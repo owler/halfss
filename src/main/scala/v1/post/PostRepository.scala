@@ -268,13 +268,13 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
       val id = rs.getInt("id")
       map += id -> Account(id,
         rs.getString("email"),
-        opt(rs.getString("fname")),
-        opt(rs.getString("sname")),
-        opt(rs.getString("phone")),
+        Option(rs.getString("fname")),
+        Option(rs.getString("sname")),
+        Option(rs.getString("phone")),
         rs.getString("sex"),
         rs.getInt("birth"),
-        opt(rs.getString("country")),
-        opt(rs.getString("city"))
+        Option(rs.getString("country")),
+        Option(rs.getString("city"))
       )
     }
     statmt.close()

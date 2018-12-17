@@ -260,6 +260,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
   }
 
   private def getAccounts(sql: String)(implicit mc: MarkerContext): Option[Map[Int, Account]] = {
+    println(sql)
     val statmt = conn.createStatement()
     val rs = statmt.executeQuery(sql)
     var map = Map[Int, Account]()

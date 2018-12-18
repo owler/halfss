@@ -1,5 +1,7 @@
 package v1.post
 
+import java.util.{Calendar, GregorianCalendar, TimeZone}
+
 import javax.inject.Inject
 import play.api.Logger
 import play.api.libs.json.Json
@@ -101,6 +103,7 @@ class AccountController @Inject()(cc: PostControllerComponents)(implicit ec: Exe
         case Neq(name) => name + "!='" + l._2.head + "'"
         case Starts(name) => name + " like '" + l._2.head + "%'"
         case Code(name) => name + " like '%(" + l._2.head + ")%'"
+        case Year(name) => val y = y_from_to(l._2.head.toInt); name + " >= " + y._1 + " AND " + name + " < " + y._2
         case Null(name) => name + (l._2.head match {
           case "0" => " is not null"
           case "1" => " is null"
@@ -172,4 +175,13 @@ class AccountController @Inject()(cc: PostControllerComponents)(implicit ec: Exe
     }
   }
 
+  def y_from_to(year: Int) = {
+    val c = new GregorianCalendar(TimeZone.getTimeZone("UTC"))
+    c.clear()
+    c.set(Calendar.YEAR, 1970 + year)
+    val yFrom = c.getTimeInMillis / 1000
+    c.add(Calendar.YEAR, 1)
+    val yTo = c.getTimeInMillis / 1000
+    (yFrom, yTo)
+  }
 }

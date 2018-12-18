@@ -60,6 +60,31 @@ object Null extends Mstr {
   override def prefix: String = "_null"
   override def allowed: List[String] = List("fname", "sname", "phone", "country", "city", "premium")
 }
+
+object Starts extends Mstr {
+  override def prefix: String = "_starts"
+  override def allowed: List[String] = List("sname")
+}
+
+object Code extends Mstr {
+  override def prefix: String = "_code"
+  override def allowed: List[String] = List("phone")
+}
+
+object Year extends Mstr {
+  override def prefix: String = "_year"
+  override def allowed: List[String] = List("birth")
+}
+
+object Contains extends Mstr {
+  override def prefix: String = "_contains"
+  override def allowed: List[String] = List("interests", "likes")
+}
+
+object Now extends Mstr {
+  override def prefix: String = "_now"
+  override def allowed: List[String] = List("premium")
+}
 /**
   * Takes HTTP requests and produces JSON.
   */
@@ -74,6 +99,8 @@ class AccountController @Inject()(cc: PostControllerComponents)(implicit ec: Exe
     val list = request.queryString.filterNot(x => x._1 == "query_id" || x._1 == "limit").map(l => l._1 match {
         case Eq(name) => name + "='" + l._2.head + "'"
         case Neq(name) => name + "!='" + l._2.head + "'"
+        case Starts(name) => name + " like '" + l._2.head + "%'"
+        case Code(name) => name + " like '%(" + l._2.head + ")%'"
         case Null(name) => name + (l._2.head match {
           case "0" => " is not null"
           case "1" => " is null"

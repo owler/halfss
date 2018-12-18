@@ -178,7 +178,7 @@ class AccountController @Inject()(cc: PostControllerComponents)(implicit ec: Exe
   def y_from_to(year: Int) = {
     val c = new GregorianCalendar(TimeZone.getTimeZone("UTC"))
     c.clear()
-    c.set(Calendar.YEAR, 1970 + year)
+    c.set(Calendar.YEAR, year)
     val yFrom = c.getTimeInMillis / 1000
     c.add(Calendar.YEAR, 1)
     val yTo = c.getTimeInMillis / 1000

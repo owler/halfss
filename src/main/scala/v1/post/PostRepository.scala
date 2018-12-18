@@ -286,13 +286,13 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
     }
   }
 
-  val sqlAccountWhere = "SELECT id, email, fname, sname, phone, sex, birth, country, city from Accounts WHERE "
-  val sqlAccount = sqlAccountWhere + "id="
+  val sqlAccountWhere = "SELECT id, email, fname, sname, phone, sex, birth, country, city from Accounts "
+  val sqlAccount = sqlAccountWhere + " WHERE id="
 
 
   override def filter(list: Iterable[String], limit: Option[Int])(implicit mc: MarkerContext): Future[List[Account]] = {
     Future {
-      getAccounts(sqlAccountWhere + list.mkString(" AND ") +
+      getAccounts(sqlAccountWhere + (if (list.nonEmpty) " WHERE " + list.mkString(" AND ") else "") +
         (limit match {
             case Some(i) => " LIMIT " + i
             case None => ""

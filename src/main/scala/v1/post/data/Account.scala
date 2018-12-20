@@ -7,9 +7,9 @@ import play.api.libs.json._
 /**
   * Created by owler on 12/16/2018.
   */
-final case class Account(id: Int, email: String, fname: Option[String], sname: Option[String], phone: Option[String], sex: String, birth: Int, country: Option[String], city: Option[String])
+final case class Account(id: Int, email: String, fname: Option[String], sname: Option[String], phone: Option[String], sex: String, birth: Int, country: Option[String], city: Option[String], interests: Option[List[String]])
 
-final case class AccountPost(email: Option[String], fname: Option[String], sname: Option[String], phone: Option[String], sex: Option[String], birth: Option[Int], country: Option[String], city: Option[String]) {
+final case class AccountPost(email: Option[String], fname: Option[String], sname: Option[String], phone: Option[String], sex: Option[String], birth: Option[Int], country: Option[String], city: Option[String], interests: Option[List[String]]) {
   def verify: Boolean = {
     email.map(_.length <= 100).getOrElse(true) && fname.map(_.length <= 50).getOrElse(true) &&
       sname.map(_.length <= 50).getOrElse(true) && sex.map(g => g == "m" || g == "f").getOrElse(true)
@@ -45,7 +45,8 @@ object Account {
     (JsPath \ "sex").read[String] and
     (JsPath \ "birth").read[Int] and
     (JsPath \ "country").readNullable[String] and
-    (JsPath \ "city").readNullable[String]
+    (JsPath \ "city").readNullable[String] and
+    (JsPath \ "interests").readNullable[List[String]]
   )(Account.apply _)
 }
 
@@ -58,7 +59,8 @@ object AccountPost {
         (JsPath \ "sex").readNullable[String] and
         (JsPath \ "birth").readNullable[Int] and
         (JsPath \ "country").readNullable[String] and
-        (JsPath \ "city").readNullable[String]
+        (JsPath \ "city").readNullable[String] and
+        (JsPath \ "interests").readNullable[List[String]]
     )(AccountPost.apply _)
 
 }

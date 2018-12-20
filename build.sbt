@@ -1,4 +1,4 @@
-name <<= baseDirectory("example-" + _.getName)
+name := "example-" + baseDirectory.value.getName
 
 version := "1.0.0"
 
@@ -39,7 +39,7 @@ import java.util.UUID
 
 import com.typesafe.sbt.SbtNativePackager.autoImport.NativePackagerHelper._
 
-mappings in Universal ++= contentOf("src/main/resources")
+//mappings in Universal ++= contentOf("src/main/resources")
 
 val excludeFileRegx = """(.*?)\.(properties|props|conf|dsl|txt|xml|sh)$""".r
 mappings in(Compile, packageBin) := {
@@ -52,11 +52,11 @@ lazy val pack = TaskKey[File]("pack")
 lazy val zipD = TaskKey[File]("zip")
 lazy val zipT = TaskKey[File]("tar")
 
-packageOptions in(Compile, packageBin) <+= (externalDependencyClasspath in Compile) map {
-  (cp: Classpath) =>
-    val rcp = cp map (_.data.name) mkString (" ")
-    Package.ManifestAttributes(java.util.jar.Attributes.Name.CLASS_PATH -> rcp)
-}
+packageOptions in(Compile, packageBin) += Package.ManifestAttributes(
+  java.util.jar.Attributes.Name.CLASS_PATH ->
+    ((externalDependencyClasspath in Compile).value map ("lib\\"+_.data.name) mkString(" "))
+)
+
 
 /*
 pack <<= (clean, update, packageBin in Compile, stage) map {
@@ -86,7 +86,7 @@ mappings in Universal := {
 }
 
 mappings in Universal := {
-  val runtimeLibs = update.value.select(configuration = Set("runtime")) map {
+  val runtimeLibs = update.value.select(configuration = configurationFilter("runtime")) map {
     f: File => f -> ("lib/" + f.name)
   }
   runtimeLibs ++: (mappings in Universal).value
@@ -101,18 +101,17 @@ mappings in Universal <++= (update) map {
 */
 
 
-mappings in Universal <<= (taskTemporaryDirectory, (mappings in Universal)) map {
-  (tempDir, universalMappings) =>
-    val sh = universalMappings filter {
-      case (file, name) => name.endsWith(".sh")
-    }
-    val filtered = universalMappings filter {
-      case (file, name) => !name.endsWith(".sh")
-    }
-    val rsh = sh map {
-      case (f, n) => dos2unix(tempDir, f) -> n
-    }
-    filtered ++ rsh
+mappings in Universal := {
+  val sh = (mappings in Universal).value filter {
+    case (file, name) => name.endsWith(".sh")
+  }
+  val filtered = (mappings in Universal).value filter {
+    case (file, name) => !name.endsWith(".sh")
+  }
+  val rsh = sh map {
+    case (f, n) => dos2unix(taskTemporaryDirectory.value, f) -> n
+  }
+  filtered ++ rsh
 }
 
 def dos2unix(tempDir: File, f: File): File = {

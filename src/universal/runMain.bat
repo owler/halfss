@@ -1,7 +1,5 @@
-@echo off
+@echo on
 echo Main started
 
-call setEnv.bat
-
-java -server -verbose:gc -Xms512m -Xmx1512m -cp "%CLASSPATH%" -Dplay.http.secret.key=abcdefghijk play.core.server.ProdServerStart
+java -server -verbose:gc -Xms512m -Xmx1512m -cp "conf;lib\*" -Dplay.http.secret.key=abcdefghijk play.core.server.ProdServerStart
 exit

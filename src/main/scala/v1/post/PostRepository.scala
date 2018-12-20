@@ -2,17 +2,16 @@ package v1.post
 
 import java.sql.{Connection, DriverManager}
 import java.util.Date
-import javax.inject.{Inject, Singleton}
 
 import akka.actor.ActorSystem
+import javax.inject.{Inject, Singleton}
 import play.api.libs.concurrent.CustomExecutionContext
 import play.api.libs.json._
 import play.api.mvc.{Result, Results}
 import play.api.{Logger, MarkerContext}
 import v1.post.data._
 
-import scala.collection.Map
-import scala.collection.mutable.ListBuffer
+import scala.collection.{Map, mutable}
 import scala.concurrent.Future
 import scala.io.Source
 
@@ -24,7 +23,7 @@ class PostExecutionContext @Inject()(actorSystem: ActorSystem) extends CustomExe
   */
 trait PostRepository {
   def getNow: Long
-
+  def wrapInterests(str: List[String]): List[Int]
   def createAccount(data: Account)(implicit mc: MarkerContext): Future[Result]
 
   def updateAccount(id: Int, data: AccountPost)(implicit mc: MarkerContext): Future[Result]
@@ -43,12 +42,15 @@ trait PostRepository {
   */
 @Singleton
 class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends PostRepository {
+
   import scala.collection.JavaConverters._
+
   private val logger = Logger(this.getClass)
+  var interests = Array[String]()
   //val rootzip = new java.util.zip.ZipFile("/tmp/data/data.zip")
   val rootzip = new java.util.zip.ZipFile("data.zip")
-  var now = 0L//Source.fromFile("/tmp/data/options.txt").getLines.toList.head.toLong * 1000
-  rootzip.entries.asScala.filter(_.getName.contains("options")).foreach(e=>
+  var now = 0L //Source.fromFile("/tmp/data/options.txt").getLines.toList.head.toLong * 1000
+  rootzip.entries.asScala.filter(_.getName.contains("options")).foreach(e =>
     now = Source.fromInputStream(rootzip.getInputStream(e)).getLines.toList.head.toLong * 1000
   )
   println("data.zip timestamp " + new Date(now))
@@ -63,6 +65,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
   createIndex()
   private val end = System.currentTimeMillis()
   println("All data loaded in " + (end - start) / 1000 + "s. Accounts: " + getCount("Accounts"))
+  println("Total interests: " + interests.size)
   System.gc()
 
   import java.sql.SQLException
@@ -71,13 +74,17 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
   @throws[SQLException]
   def createDB(): Unit = {
     val statmt = conn.createStatement()
-    statmt.execute("CREATE TABLE if not exists Accounts (id INTEGER PRIMARY KEY, email text, fname text, sname text, phone text, sex text, birth integer, country text, city text);")
+    statmt.execute("CREATE TABLE if not exists Accounts (id INTEGER PRIMARY KEY, email text, fname text, sname text, phone text, sex text, birth integer, country text, city text, interests text);")
     statmt.close()
     System.out.println("Таблица создана или уже существует.")
   }
 
-  def loadDb() = {
+  override def wrapInterests(str: List[String]): List[Int] = {
+    str.map(s => interests.indexOf(s))
+  }
 
+
+  def loadDb() = {
     rootzip.entries.asScala.
       filter(_.getName.endsWith(".json")).
       foreach { e =>
@@ -105,9 +112,22 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
     statmt.close()
   }
 
+  def addInterests(values: List[String]): String ={
+    values.map(v => addInterest(v)).sorted.mkString(",")
+  }
+
+  def addInterest(value: String): Int ={
+    interests.indexOf(value) match {
+      case -1 => interests = interests :+ value; interests.length
+      case i: Int => i + 1
+    }
+  }
+
   def writeAccounts(accounts: Iterable[Account])(implicit conn: Connection): Unit = {
     val statmt = conn.createStatement()
-    val sb = new StringBuffer("INSERT INTO Accounts (id, email, fname, sname, phone, sex, birth, country, city) VALUES ")
+    val interes = accounts.map(a => a.id -> a.interests.map(v => addInterests(v))).toMap
+    println(interes(1))
+    val sb = new StringBuffer("INSERT INTO Accounts (id, email, fname, sname, phone, sex, birth, country, city, interests) VALUES ")
       .append(
         accounts.map(account =>
           new StringBuffer("(").append(account.id).append(",'")
@@ -118,8 +138,9 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
             .append(account.sex).append("',")
             .append(account.birth).append(",")
             .append(unwrap(account.country)).append(",")
-            .append(unwrap(account.city)).append("")
-            .append(")").toString).mkString(",")
+            .append(unwrap(account.city)).append(",'")
+            .append(interes(account.id).getOrElse(0))
+            .append("')").toString).mkString(",")
       )
       .append(";")
     statmt.execute(sb.toString)
@@ -199,6 +220,10 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
                 data.city match {
                   case Some(value) => data.city
                   case None => account.city
+                },
+                data.interests match {
+                  case Some(value) => data.interests
+                  case None => account.interests
                 }
               )
               deleteObj(updatedAccount.id, "Accounts")
@@ -209,7 +234,6 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
       }
     }
   }
-
 
 
   private def getCount(table: String)(implicit mc: MarkerContext): Int = {
@@ -236,6 +260,10 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
     count
   }
 
+  def unwrapInterests(inter: String): Option[List[String]] = {
+    Option(inter.split(",").toList)
+  }
+
   override def getAccount(id: Int)(implicit mc: MarkerContext): Future[Option[Account]] = {
     Future {
       val statmt = conn.createStatement()
@@ -249,7 +277,8 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
           rs.getString("sex"),
           rs.getInt("birth"),
           Option(rs.getString("country")),
-          Option(rs.getString("city"))
+          Option(rs.getString("city")),
+          unwrapInterests(rs.getString("interests"))
         ))
       } else {
         None
@@ -275,7 +304,8 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
         rs.getString("sex"),
         rs.getInt("birth"),
         Option(rs.getString("country")),
-        Option(rs.getString("city"))
+        Option(rs.getString("city")),
+        unwrapInterests(rs.getString("interests"))
       )
     }
     statmt.close()
@@ -286,7 +316,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
     }
   }
 
-  val sqlAccountWhere = "SELECT id, email, fname, sname, phone, sex, birth, country, city from Accounts "
+  val sqlAccountWhere = "SELECT id, email, fname, sname, phone, sex, birth, country, city, interests from Accounts "
   val sqlAccount = sqlAccountWhere + " WHERE id="
 
 
@@ -294,9 +324,9 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
     Future {
       getAccounts(sqlAccountWhere + (if (list.nonEmpty) " WHERE " + list.mkString(" AND ") else "") +
         (limit match {
-            case Some(i) => " LIMIT " + i
-            case None => ""
-          })
+          case Some(i) => " LIMIT " + i
+          case None => ""
+        })
       ) match {
         case Some(map) => map.values.toList
         case None => List()

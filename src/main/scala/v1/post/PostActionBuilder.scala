@@ -87,6 +87,7 @@ class PostActionBuilder @Inject()(messagesApi: MessagesApi, playBodyParsers: Pla
  */
 case class PostControllerComponents @Inject()(postActionBuilder: PostActionBuilder,
                                                postResourceHandler: PostResourceHandler,
+                                               postRepository: PostRepository,
                                                actionBuilder: DefaultActionBuilder,
                                                parsers: PlayBodyParsers,
                                                messagesApi: MessagesApi,

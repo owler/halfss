@@ -101,6 +101,7 @@ class AccountController @Inject()(cc: PostControllerComponents)(implicit ec: Exe
     val list = request.queryString.filterNot(x => x._1 == "query_id" || x._1 == "limit").map(l => l._1 match {
         case Eq(name) => name + "='" + l._2.head + "'"
         case Contains(name) => name + "='" + cc.postRepository.wrapInterests(l._2.head.split(",").toList).sorted.mkString(",") + "'"
+        case Any(name) if name == "interests" => cc.postRepository.wrapInterests(l._2.head.split(",").toList).sorted.map(e => name + " like '%," + e + ",%' OR " + name + " like '" + e + ",%' OR " + name + " like '%," + e + "'").mkString(" OR ")
         case Neq(name) => name + "!='" + l._2.head + "'"
         case Starts(name) => name + " like '" + l._2.head + "%'"
         case Code(name) => name + " like '%(" + l._2.head + ")%'"

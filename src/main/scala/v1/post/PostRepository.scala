@@ -75,6 +75,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
   def createDB(): Unit = {
     val statmt = conn.createStatement()
     statmt.execute("CREATE TABLE if not exists Accounts (id INTEGER PRIMARY KEY, email text, fname text, sname text, phone text, sex text, birth integer, country text, city text, interests text);")
+    statmt.execute("CREATE TABLE if not exists Likes (liker INTEGER, likee INTEGER, ts integer);")
     statmt.close()
     System.out.println("Таблица создана или уже существует.")
   }
@@ -144,6 +145,19 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
       )
       .append(";")
     statmt.execute(sb.toString)
+    val sb2= new StringBuffer("INSERT INTO Likes (liker, likee, ts) VALUES ")
+      .append(
+        accounts.map(account => account.likes.map(like => like.map(l =>
+          new StringBuffer("(").append(account.id).append(",")
+            .append(l.id).append(",")
+            .append(l.ts).append(")").toString).mkString(","))
+      ).filter(_.nonEmpty).map(_.getOrElse("")).mkString(",")).append(";")
+    try {
+      println(sb2.toString.take(1600))
+      statmt.execute(sb2.toString)
+    } catch {
+      case e => println(e)
+    }
     statmt.close()
   }
 
@@ -224,7 +238,12 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
                 data.interests match {
                   case Some(value) => data.interests
                   case None => account.interests
+                },
+                data.likes match {
+                  case Some(value) => data.likes
+                  case None => account.likes
                 }
+
               )
               deleteObj(updatedAccount.id, "Accounts")
               writeAccounts(List(updatedAccount))
@@ -278,7 +297,8 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
           rs.getInt("birth"),
           Option(rs.getString("country")),
           Option(rs.getString("city")),
-          unwrapInterests(rs.getString("interests"))
+          unwrapInterests(rs.getString("interests")),
+          Option(null)
         ))
       } else {
         None
@@ -305,7 +325,8 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
         rs.getInt("birth"),
         Option(rs.getString("country")),
         Option(rs.getString("city")),
-        unwrapInterests(rs.getString("interests"))
+        unwrapInterests(rs.getString("interests")),
+        Option(null)
       )
     }
     statmt.close()

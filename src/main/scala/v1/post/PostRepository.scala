@@ -147,16 +147,16 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
     statmt.execute(sb.toString)
     val sb2= new StringBuffer("INSERT INTO Likes (liker, likee, ts) VALUES ")
       .append(
-        accounts.map(account => account.likes.map(like => like.map(l =>
+        accounts.flatMap(account => account.likes.map(listLikes => listLikes.map(l =>
           new StringBuffer("(").append(account.id).append(",")
             .append(l.id).append(",")
-            .append(l.ts).append(")").toString).mkString(","))
-      ).filter(_.nonEmpty).map(_.getOrElse("")).mkString(",")).append(";")
+            .append(l.ts).append(")").toString))
+      ).flatten.mkString(",")).append(";")
     try {
       println(sb2.toString.take(1600))
       statmt.execute(sb2.toString)
     } catch {
-      case e => println(e)
+      case e: Throwable => println(e)
     }
     statmt.close()
   }

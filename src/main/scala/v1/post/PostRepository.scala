@@ -153,7 +153,6 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
             .append(l.ts).append(")").toString))
       ).flatten.mkString(",")).append(";")
     try {
-      println(sb2.toString.take(1600))
       statmt.execute(sb2.toString)
     } catch {
       case e: Throwable => println(e)

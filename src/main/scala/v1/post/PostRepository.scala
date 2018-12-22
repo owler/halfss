@@ -363,6 +363,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
       val sql = "SELECT " + keys.mkString(",") + ", count(1) as c FROM Accounts " +
         (if (list.nonEmpty) " WHERE " + list.mkString(" AND ") else "") +
         " GROUP BY " + keys.mkString(",") +
+        " ORDER BY c desc " +
         (limit match {
           case Some(i) => " LIMIT " + i
           case None => ""

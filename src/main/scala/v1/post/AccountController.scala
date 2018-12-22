@@ -180,7 +180,7 @@ class AccountController @Inject()(cc: PostControllerComponents)(implicit ec: Exe
       case name => name + "='" + l._2.head + "'"
     })
     postResourceHandler.group(keys, list, limit).map(
-      l => Ok(Json.toJson(l))
+      l => Ok(Json.obj("groups" -> l))
     )
   }
 

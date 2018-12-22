@@ -49,7 +49,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
   private val logger = Logger(this.getClass)
   var interests = Array[String]()
   //val rootzip = new java.util.zip.ZipFile("/tmp/data/data.zip")
-  val rootzip = new java.util.zip.ZipFile("data.zip")
+  val rootzip = new java.util.zip.ZipFile("./data.zip")
   var now = 0L //Source.fromFile("/tmp/data/options.txt").getLines.toList.head.toLong * 1000
   rootzip.entries.asScala.filter(_.getName.contains("options")).foreach(e =>
     now = Source.fromInputStream(rootzip.getInputStream(e)).getLines.toList.head.toLong * 1000
@@ -126,7 +126,9 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
   }
 
   def writeAccounts(accounts: Iterable[Account])(implicit conn: Connection): Unit = {
+
     val statmt = conn.createStatement()
+    try {
     val interes = accounts.map(a => a.id -> a.interests.map(v => addInterests(v))).toMap
     println(interes(1))
     val sb = new StringBuffer("INSERT INTO Accounts (id, email, fname, sname, phone, sex, birth, country, city, interests) VALUES ")
@@ -153,7 +155,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
             .append(l.id).append(",")
             .append(l.ts).append(")").toString))
       ).flatten.mkString(",")).append(";")
-    try {
+
       statmt.execute(sb2.toString)
     } catch {
       case e: Throwable => println(e)

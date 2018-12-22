@@ -1,6 +1,6 @@
 package v1.post
 
-import java.sql.{Connection, DriverManager}
+import java.sql.{Connection, DriverManager, ResultSet}
 import java.util.Date
 
 import akka.actor.ActorSystem
@@ -31,6 +31,7 @@ trait PostRepository {
   def getAccount(id: Int)(implicit mc: MarkerContext): Future[Option[Account]]
 
   def filter(list: Iterable[String], limit: Option[Int])(implicit mc: MarkerContext): Future[List[Account]]
+  def group(keys: Iterable[String], list: Iterable[String], limit: Option[Int])(implicit mc: MarkerContext): Future[List[Group]]
 }
 
 /**
@@ -356,4 +357,48 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
       }
     }
   }
+
+  override def group(keys: Iterable[String], list: Iterable[String], limit: Option[Int])(implicit mc: MarkerContext): Future[List[Group]] = {
+    Future {
+      val sql = "SELECT " + keys.mkString(",") + ", count(1) as c FROM Accounts " +
+        (if (list.nonEmpty) " WHERE " + list.mkString(" AND ") else "") +
+        " GROUP BY " + keys.mkString(",") +
+        (limit match {
+          case Some(i) => " LIMIT " + i
+          case None => ""
+        })
+      getGroups(sql, keys) match {
+        case Some(list) => list
+        case None => List()
+      }
+    }
+  }
+
+  private def get(rs: ResultSet, name: String, key: Iterable[String]):Option[String] = {
+    Option(if(key.exists(_ == name)) rs.getString(name) else null)
+  }
+  private def getGroups(sql: String, key: Iterable[String])(implicit mc: MarkerContext): Option[List[Group]] = {
+    println(sql)
+    val statmt = conn.createStatement()
+    val rs = statmt.executeQuery(sql)
+    var list = List[Group]()
+
+    while (rs.next()) {
+      list = Group(
+        get(rs, "sex", key),
+        get(rs, "status", key),
+        get(rs, "interests", key),
+        get(rs, "country", key),
+        get(rs, "city", key),
+        rs.getInt("c")
+      ) :: list
+    }
+    statmt.close()
+    if (list.isEmpty) {
+      None
+    } else {
+      Some(list)
+    }
+  }
+
 }

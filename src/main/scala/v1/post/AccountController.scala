@@ -173,9 +173,9 @@ class AccountController @Inject()(cc: PostControllerComponents)(implicit ec: Exe
 
 
   def group: Action[AnyContent] = PostAction.async { implicit request =>
-    Future {
-      Ok(Json.obj())
-    }
+    postResourceHandler.group(List("city"), List("sex = 'f'"), Option(5)).map(
+      l => Ok(Json.toJson(l))
+    )
   }
 
   def y_from_to(year: Int) = {

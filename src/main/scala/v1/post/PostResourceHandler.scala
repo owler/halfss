@@ -84,6 +84,10 @@ class PostResourceHandler @Inject()(
     postRepository.filter(list, limit)
   }
 
+  def group(keys: Iterable[String], list: Iterable[String], limit: Option[Int])(implicit mc: MarkerContext): Future[List[Group]] = {
+    postRepository.group(keys, list, limit)
+  }
+
   def lookupAccount(id: Int)(implicit mc: MarkerContext): Future[Option[Account]] = {
     postRepository.getAccount(id)
   }

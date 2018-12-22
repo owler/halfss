@@ -174,12 +174,14 @@ class AccountController @Inject()(cc: PostControllerComponents)(implicit ec: Exe
 
   def group: Action[AnyContent] = PostAction.async { implicit request =>
     val limit = request.getQueryString("limit").map(_.toInt)
+    val order = request.getQueryString("order").map(_.toInt).map(_ == -1)
     val keys = request.getQueryString("keys").map(_.split(",")).get
-    val list = request.queryString.filterNot(x => x._1 == "query_id" || x._1 == "limit" || x._1 == "keys").map(l => l._1 match {
+    val list = request.queryString.filterNot(x => x._1 == "query_id" || x._1 == "limit" ||
+      x._1 == "keys" || x._1 == "order").map(l => l._1 match {
       case "birth" => val y = y_from_to(l._2.head.toInt); "birth >= " + y._1 + " AND birth < " + y._2
       case name => name + "='" + l._2.head + "'"
     })
-    postResourceHandler.group(keys, list, limit).map(
+    postResourceHandler.group(keys, list, limit, order.getOrElse(true)).map(
       l => Ok(Json.obj("groups" -> l))
     )
   }

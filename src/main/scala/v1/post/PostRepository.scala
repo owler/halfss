@@ -31,7 +31,7 @@ trait PostRepository {
   def getAccount(id: Int)(implicit mc: MarkerContext): Future[Option[Account]]
 
   def filter(list: Iterable[String], limit: Option[Int])(implicit mc: MarkerContext): Future[List[Account]]
-  def group(keys: Iterable[String], list: Iterable[String], limit: Option[Int])(implicit mc: MarkerContext): Future[List[Group]]
+  def group(keys: Iterable[String], list: Iterable[String], limit: Option[Int], order: Boolean)(implicit mc: MarkerContext): Future[List[Group]]
 }
 
 /**
@@ -367,12 +367,12 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
     }
   }
 
-  override def group(keys: Iterable[String], list: Iterable[String], limit: Option[Int])(implicit mc: MarkerContext): Future[List[Group]] = {
+  override def group(keys: Iterable[String], list: Iterable[String], limit: Option[Int], order: Boolean)(implicit mc: MarkerContext): Future[List[Group]] = {
     Future {
       val sql = "SELECT " + keys.mkString(",") + ", count(1) as c FROM Accounts " +
         (if (list.nonEmpty) " WHERE " + list.mkString(" AND ") else "") +
         " GROUP BY " + keys.mkString(",") +
-        " ORDER BY c desc " +
+        (if(order) " ORDER BY c desc " else " ORDER BY c ") +
         (limit match {
           case Some(i) => " LIMIT " + i
           case None => ""
@@ -394,14 +394,14 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
     var list = List[Group]()
 
     while (rs.next()) {
-      list = Group(
+      list = list :+ Group(
         get(rs, "sex", key),
         get(rs, "status", key),
         get(rs, "interests", key),
         get(rs, "country", key),
         get(rs, "city", key),
         rs.getInt("c")
-      ) :: list
+      )
     }
     statmt.close()
     if (list.isEmpty) {

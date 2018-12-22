@@ -337,12 +337,15 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
   }
 
   val sqlAccountWhere = "SELECT id, email, fname, sname, phone, sex, birth, country, city, interests from Accounts "
+  val sqlLikesWhere = "SELECT id, email, fname, sname, phone, sex, birth, country, city, interests from Accounts a inner join Likes l on a.id = l.liker "
   val sqlAccount = sqlAccountWhere + " WHERE id="
 
 
   override def filter(list: Iterable[String], limit: Option[Int])(implicit mc: MarkerContext): Future[List[Account]] = {
     Future {
-      getAccounts(sqlAccountWhere + (if (list.nonEmpty) " WHERE " + list.mkString(" AND ") else "") +
+      val table = if(list.exists(s => s.contains("likee in ("))) sqlLikesWhere else sqlAccountWhere
+      getAccounts(table + (if (list.nonEmpty) " WHERE " + list.mkString(" AND ") else "") +
+        (if(table == sqlLikesWhere) " GROUP BY id, email, fname, sname, phone, sex, birth, country, city, interests HAVING count(1) = " + list.filter(s => s.contains("likee in (")).head.split(",").length else "") +
         (limit match {
           case Some(i) => " LIMIT " + i
           case None => ""

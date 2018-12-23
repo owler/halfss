@@ -369,7 +369,8 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
 
   override def group(keys: Iterable[String], list: Iterable[String], limit: Option[Int], order: Boolean)(implicit mc: MarkerContext): Future[List[Group]] = {
     Future {
-      val sql = "SELECT " + keys.mkString(",") + ", count(1) as c FROM Accounts " +
+      val sql = "SELECT " + keys.mkString(",") + ", count(1) as c FROM Accounts a " +
+        (if(list.exists(_ contains "likee =")) " INNER JOIN Likes l on a.id = l.liker " else "") +
         (if (list.nonEmpty) " WHERE " + list.mkString(" AND ") else "") +
         " GROUP BY " + keys.mkString(",") +
         (if(order) " ORDER BY c desc " else " ORDER BY c ") +

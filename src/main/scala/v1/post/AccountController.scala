@@ -179,6 +179,7 @@ class AccountController @Inject()(cc: PostControllerComponents)(implicit ec: Exe
     val list = request.queryString.filterNot(x => x._1 == "query_id" || x._1 == "limit" ||
       x._1 == "keys" || x._1 == "order").map(l => l._1 match {
       case "likes" => "likee = " + l._2.head.toInt
+      case "interests" => "interests = " + cc.postRepository.wrapInterests(List(l._2.head)).head
       case "birth" => val y = y_from_to(l._2.head.toInt); "birth >= " + y._1 + " AND birth < " + y._2
       case name => name + "='" + l._2.head + "'"
     })

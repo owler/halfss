@@ -75,8 +75,9 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
   @throws[SQLException]
   def createDB(): Unit = {
     val statmt = conn.createStatement()
-    statmt.execute("CREATE TABLE if not exists Accounts (id INTEGER PRIMARY KEY, status text,email text, fname text, sname text, phone text, sex text, birth integer, country text, city text, interests text);")
+    statmt.execute("CREATE TABLE if not exists Accounts (id INTEGER PRIMARY KEY, status text,email text, fname text, sname text, phone text, sex text, birth integer, country text, city text);")
     statmt.execute("CREATE TABLE if not exists Likes (liker INTEGER, likee INTEGER, ts integer);")
+    statmt.execute("CREATE TABLE if not exists Interests (acc INTEGER, interests INTEGER);")
     statmt.close()
     System.out.println("Таблица создана или уже существует.")
   }
@@ -131,7 +132,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
     try {
     val interes = accounts.map(a => a.id -> a.interests.map(v => addInterests(v))).toMap
     println(interes(1))
-    val sb = new StringBuffer("INSERT INTO Accounts (id, status, email, fname, sname, phone, sex, birth, country, city, interests) VALUES ")
+    val sb = new StringBuffer("INSERT INTO Accounts (id, status, email, fname, sname, phone, sex, birth, country, city) VALUES ")
       .append(
         accounts.map(account =>
           new StringBuffer("(").append(account.id).append(",")
@@ -143,9 +144,8 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
             .append(account.sex).append("',")
             .append(account.birth).append(",")
             .append(unwrap(account.country)).append(",")
-            .append(unwrap(account.city)).append(",'")
-            .append(interes(account.id).getOrElse(0))
-            .append("')").toString).mkString(",")
+            .append(unwrap(account.city))
+            .append(")").toString).mkString(",")
       )
       .append(";")
     statmt.execute(sb.toString)
@@ -157,7 +157,16 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
             .append(l.ts).append(")").toString))
       ).flatten.mkString(",")).append(";")
 
-      statmt.execute(sb2.toString)
+    statmt.execute(sb2.toString)
+
+    val sb3= new StringBuffer("INSERT INTO Interests (acc, interests) VALUES ")
+      .append(
+        accounts.flatMap(account => account.interests.map(listInterests => listInterests.map(l =>
+          new StringBuffer("(").append(account.id).append(",")
+            .append(interests.indexOf(l)).append(")").toString))
+      ).flatten.mkString(",")).append(";")
+
+      statmt.execute(sb3.toString)
     } catch {
       case e: Throwable => println(e)
     }
@@ -305,7 +314,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
           rs.getInt("birth"),
           Option(rs.getString("country")),
           Option(rs.getString("city")),
-          unwrapInterests(rs.getString("interests")),
+          Option(null),
           Option(null)
         ))
       } else {
@@ -334,7 +343,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
         rs.getInt("birth"),
         Option(rs.getString("country")),
         Option(rs.getString("city")),
-        unwrapInterests(rs.getString("interests")),
+        Option(null),
         Option(null)
       )
     }
@@ -346,8 +355,8 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
     }
   }
 
-  val sqlAccountWhere = "SELECT id, status, email, fname, sname, phone, sex, birth, country, city, interests from Accounts "
-  val sqlLikesWhere = "SELECT id, status, email, fname, sname, phone, sex, birth, country, city, interests from Accounts a inner join Likes l on a.id = l.liker "
+  val sqlAccountWhere = "SELECT id, status, email, fname, sname, phone, sex, birth, country, city from Accounts "
+  val sqlLikesWhere = "SELECT id, status, email, fname, sname, phone, sex, birth, country, city from Accounts a inner join Likes l on a.id = l.liker "
   val sqlAccount = sqlAccountWhere + " WHERE id="
 
 
@@ -355,7 +364,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
     Future {
       val table = if(list.exists(s => s.contains("likee in ("))) sqlLikesWhere else sqlAccountWhere
       getAccounts(table + (if (list.nonEmpty) " WHERE " + list.mkString(" AND ") else "") +
-        (if(table == sqlLikesWhere) " GROUP BY id, email, fname, sname, phone, sex, birth, country, city, interests HAVING count(1) = " + list.filter(s => s.contains("likee in (")).head.split(",").length else "") +
+        (if(table == sqlLikesWhere) " GROUP BY id, email, fname, sname, phone, sex, birth, country, city HAVING count(1) = " + list.filter(s => s.contains("likee in (")).head.split(",").length else "") +
         (limit match {
           case Some(i) => " LIMIT " + i
           case None => ""
@@ -370,6 +379,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
   override def group(keys: Iterable[String], list: Iterable[String], limit: Option[Int], order: Boolean)(implicit mc: MarkerContext): Future[List[Group]] = {
     Future {
       val sql = "SELECT " + keys.mkString(",") + ", count(1) as c FROM Accounts a " +
+        (if(list.exists(_ contains "interests =") || keys.exists(_=="interests")) " INNER JOIN Interests i on a.id = i.acc " else "") +
         (if(list.exists(_ contains "likee =")) " INNER JOIN Likes l on a.id = l.liker " else "") +
         (if (list.nonEmpty) " WHERE " + list.mkString(" AND ") else "") +
         " GROUP BY " + keys.mkString(",") +
@@ -398,7 +408,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
       list = list :+ Group(
         get(rs, "sex", key),
         get(rs, "status", key),
-        get(rs, "interests", key),
+        get(rs, "interests", key).map(x => interests(x.toInt)),
         get(rs, "country", key),
         get(rs, "city", key),
         rs.getInt("c")

@@ -399,7 +399,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
         (if(list.exists(_ contains "likee =")) " INNER JOIN Likes l on a.id = l.liker " else "") +
         (if (list.nonEmpty) " WHERE " + list.mkString(" AND ") else "") +
         " GROUP BY " + keys.mkString(",") +
-        (if(order) " ORDER BY c desc " else " ORDER BY c ") +
+        (if(order) " ORDER BY c desc," + keys.mkString(" desc, ") + " desc "  else " ORDER BY c," + keys.mkString(","))
         (limit match {
           case Some(i) => " LIMIT " + i
           case None => ""

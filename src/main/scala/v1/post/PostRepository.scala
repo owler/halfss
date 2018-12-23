@@ -358,12 +358,14 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
   val sqlAccountWhere = "SELECT id, status, email, fname, sname, phone, sex, birth, country, city from Accounts "
   val sqlLikesWhere = "SELECT id, status, email, fname, sname, phone, sex, birth, country, city from Accounts a inner join Likes l on a.id = l.liker "
   val sqlInterestsWhere = "SELECT id, status, email, fname, sname, phone, sex, birth, country, city from Accounts a inner join Interests i on a.id = i.acc "
+  val sqlInterestsLikesWhere = "SELECT id, status, email, fname, sname, phone, sex, birth, country, city from Accounts a inner join Interests i on a.id = i.acc inner join Likes l on a.id = l.liker "
   val sqlAccount = sqlAccountWhere + " WHERE id="
 
 
   override def filter(list: Iterable[String], limit: Option[Int])(implicit mc: MarkerContext): Future[List[Account]] = {
     Future {
-      val table = if(list.exists(s => s.contains("likee in ("))) sqlLikesWhere
+      val table = if(list.exists(s => s.contains("likee in (")) && list.exists(s => s.contains("interests in "))) sqlInterestsLikesWhere
+      else if(list.exists(s => s.contains("likee in ("))) sqlLikesWhere
       else if(list.exists(s => s.contains("interests in "))) sqlInterestsWhere
       else sqlAccountWhere
 
@@ -371,8 +373,10 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
         (if(table == sqlLikesWhere) " GROUP BY id, email, fname, sname, phone, sex, birth, country, city HAVING count(1) = " + list.filter(s => s.contains("likee in (")).head.split(",").length else "") +
         /* all */
         (if(table == sqlInterestsWhere && list.exists(s => s.contains("interests in ("))) " GROUP BY id, email, fname, sname, phone, sex, birth, country, city HAVING count(1) = " + list.filter(s => s.contains("interests in (")).head.split(",").length else "") +
+        (if(table == sqlInterestsLikesWhere && list.exists(s => s.contains("interests in ("))) " GROUP BY id, email, fname, sname, phone, sex, birth, country, city HAVING count(1) = " + (list.filter(s => s.contains("interests in (")).head.split(",").length * list.filter(s => s.contains("likee in (")).head.split(",").length) else "") +
         /* any */
-        (if(table == sqlInterestsWhere && list.exists(s => s.contains("interests in  ("))) " GROUP BY id, email, fname, sname, phone, sex, birth, country, city HAVING count(1) > 0 " else "") +
+        (if((table == sqlInterestsWhere) && list.exists(s => s.contains("interests in  ("))) " GROUP BY id, email, fname, sname, phone, sex, birth, country, city HAVING count(1) > 0 " else "") +
+        (if((table == sqlInterestsLikesWhere) && list.exists(s => s.contains("interests in  ("))) " GROUP BY id, email, fname, sname, phone, sex, birth, country, city HAVING count(1) >= " + list.filter(s => s.contains("likee in (")).head.split(",").length else "") +
         (limit match {
           case Some(i) => " LIMIT " + i
           case None => ""

@@ -121,6 +121,10 @@ class AccountController @Inject()(cc: PostControllerComponents)(implicit ec: Exe
       case Starts(name) => name + " like '" + l._2.head + "%'"
       case Code(name) => name + " like '%(" + l._2.head + ")%'"
       case Year(name) => val y = y_from_to(l._2.head.toInt); name + " >= " + y._1 + " AND " + name + " < " + y._2
+      case Null(name) if name=="premium" => "start" + (l._2.head match {
+        case "0" => " is not null"
+        case "1" => " is null"
+      })
       case Null(name) => name + (l._2.head match {
         case "0" => " is not null"
         case "1" => " is null"

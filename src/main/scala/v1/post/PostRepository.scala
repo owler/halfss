@@ -359,10 +359,10 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
     }
   }
 
-  val sqlAccountWhere = "SELECT id, status, email, fname, sname, phone, sex, birth, country, city from Accounts "
-  val sqlLikesWhere = "SELECT id, status, email, fname, sname, phone, sex, birth, country, city from Accounts a inner join Likes l on a.id = l.liker "
-  val sqlInterestsWhere = "SELECT id, status, email, fname, sname, phone, sex, birth, country, city from Accounts a inner join Interests i on a.id = i.acc "
-  val sqlInterestsLikesWhere = "SELECT id, status, email, fname, sname, phone, sex, birth, country, city from Accounts a inner join Interests i on a.id = i.acc inner join Likes l on a.id = l.liker "
+  val sqlAccountWhere = "SELECT id, joined, status, email, fname, sname, phone, sex, birth, country, city from Accounts "
+  val sqlLikesWhere = "SELECT id, joined, status, email, fname, sname, phone, sex, birth, country, city from Accounts a inner join Likes l on a.id = l.liker "
+  val sqlInterestsWhere = "SELECT id, joined, status, email, fname, sname, phone, sex, birth, country, city from Accounts a inner join Interests i on a.id = i.acc "
+  val sqlInterestsLikesWhere = "SELECT id, joined, status, email, fname, sname, phone, sex, birth, country, city from Accounts a inner join Interests i on a.id = i.acc inner join Likes l on a.id = l.liker "
   val sqlAccount = sqlAccountWhere + " WHERE id="
 
 

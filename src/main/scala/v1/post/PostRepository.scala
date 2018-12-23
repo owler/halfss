@@ -23,7 +23,9 @@ class PostExecutionContext @Inject()(actorSystem: ActorSystem) extends CustomExe
   */
 trait PostRepository {
   def getNow: Long
+
   def wrapInterests(str: List[String]): List[Int]
+
   def createAccount(data: Account)(implicit mc: MarkerContext): Future[Result]
 
   def updateAccount(id: Int, data: AccountPost)(implicit mc: MarkerContext): Future[Result]
@@ -31,6 +33,7 @@ trait PostRepository {
   def getAccount(id: Int)(implicit mc: MarkerContext): Future[Option[Account]]
 
   def filter(list: Iterable[String], limit: Option[Int])(implicit mc: MarkerContext): Future[List[Account]]
+
   def group(keys: Iterable[String], list: Iterable[String], limit: Option[Int], order: Boolean)(implicit mc: MarkerContext): Future[List[Group]]
 }
 
@@ -75,7 +78,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
   @throws[SQLException]
   def createDB(): Unit = {
     val statmt = conn.createStatement()
-    statmt.execute("CREATE TABLE if not exists Accounts (id INTEGER PRIMARY KEY, joined INTEGER, status text,email text, fname text, sname text, phone text, sex text, birth integer, country text, city text);")
+    statmt.execute("CREATE TABLE if not exists Accounts (id INTEGER PRIMARY KEY, joined INTEGER, status text,email text, fname text, sname text, phone text, sex text, birth integer, country text, city text, start INTEGER, finish INTEGER);")
     statmt.execute("CREATE TABLE if not exists Likes (liker INTEGER, likee INTEGER, ts integer);")
     statmt.execute("CREATE TABLE if not exists Interests (acc INTEGER, interests INTEGER);")
     statmt.close()
@@ -115,11 +118,11 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
     statmt.close()
   }
 
-  def addInterests(values: List[String]): String ={
+  def addInterests(values: List[String]): String = {
     values.map(v => addInterest(v)).sorted.mkString(",")
   }
 
-  def addInterest(value: String): Int ={
+  def addInterest(value: String): Int = {
     interests.indexOf(value) match {
       case -1 => interests = interests :+ value; interests.length
       case i: Int => i + 1
@@ -130,42 +133,44 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
 
     val statmt = conn.createStatement()
     try {
-    val interes = accounts.map(a => a.id -> a.interests.map(v => addInterests(v))).toMap
-    println(interes(1))
-    val sb = new StringBuffer("INSERT INTO Accounts (id, joined, status, email, fname, sname, phone, sex, birth, country, city) VALUES ")
-      .append(
-        accounts.map(account =>
-          new StringBuffer("(").append(account.id).append(",")
-            .append(account.joined).append(",")
-            .append(unwrap(account.status)).append(",'")
-            .append(account.email).append("',")
-            .append(unwrap(account.fname)).append(",")
-            .append(unwrap(account.sname)).append(",")
-            .append(unwrap(account.phone)).append(",'")
-            .append(account.sex).append("',")
-            .append(account.birth).append(",")
-            .append(unwrap(account.country)).append(",")
-            .append(unwrap(account.city))
-            .append(")").toString).mkString(",")
-      )
-      .append(";")
-    statmt.execute(sb.toString)
-    val sb2= new StringBuffer("INSERT INTO Likes (liker, likee, ts) VALUES ")
-      .append(
-        accounts.flatMap(account => account.likes.map(listLikes => listLikes.map(l =>
-          new StringBuffer("(").append(account.id).append(",")
-            .append(l.id).append(",")
-            .append(l.ts).append(")").toString))
-      ).flatten.mkString(",")).append(";")
+      val interes = accounts.map(a => a.id -> a.interests.map(v => addInterests(v))).toMap
+      println(interes(1))
+      val sb = new StringBuffer("INSERT INTO Accounts (id, joined, status, email, fname, sname, phone, sex, birth, country, city, start, finish) VALUES ")
+        .append(
+          accounts.map(account =>
+            new StringBuffer("(").append(account.id).append(",")
+              .append(account.joined).append(",")
+              .append(unwrap(account.status)).append(",'")
+              .append(account.email).append("',")
+              .append(unwrap(account.fname)).append(",")
+              .append(unwrap(account.sname)).append(",")
+              .append(unwrap(account.phone)).append(",'")
+              .append(account.sex).append("',")
+              .append(account.birth).append(",")
+              .append(unwrap(account.country)).append(",")
+              .append(unwrap(account.city)).append(",")
+              .append(account.premium.map(_.start).getOrElse(null)).append(",")
+              .append(account.premium.map(_.finish).getOrElse(null))
+              .append(")").toString).mkString(",")
+        )
+        .append(";")
+      statmt.execute(sb.toString)
+      val sb2 = new StringBuffer("INSERT INTO Likes (liker, likee, ts) VALUES ")
+        .append(
+          accounts.flatMap(account => account.likes.map(listLikes => listLikes.map(l =>
+            new StringBuffer("(").append(account.id).append(",")
+              .append(l.id).append(",")
+              .append(l.ts).append(")").toString))
+          ).flatten.mkString(",")).append(";")
 
-    statmt.execute(sb2.toString)
+      statmt.execute(sb2.toString)
 
-    val sb3= new StringBuffer("INSERT INTO Interests (acc, interests) VALUES ")
-      .append(
-        accounts.flatMap(account => account.interests.map(listInterests => listInterests.map(l =>
-          new StringBuffer("(").append(account.id).append(",")
-            .append(interests.indexOf(l)).append(")").toString))
-      ).flatten.mkString(",")).append(";")
+      val sb3 = new StringBuffer("INSERT INTO Interests (acc, interests) VALUES ")
+        .append(
+          accounts.flatMap(account => account.interests.map(listInterests => listInterests.map(l =>
+            new StringBuffer("(").append(account.id).append(",")
+              .append(interests.indexOf(l)).append(")").toString))
+          ).flatten.mkString(",")).append(";")
 
       statmt.execute(sb3.toString)
     } catch {
@@ -207,7 +212,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
   }
 
   private def isEmailExists(email: String): Boolean = {
-    getAccounts("SELECT id, joined, email, fname, sname, phone, sex, birth, country, city from Accounts WHERE email='" + email + "'") match {
+    getAccounts("SELECT id, joined, email, fname, sname, phone, sex, birth, country, city, start, finish from Accounts WHERE email='" + email + "'") match {
       case None => false
       case Some(map) => true
     }
@@ -260,6 +265,10 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
                 data.likes match {
                   case Some(value) => data.likes
                   case None => account.likes
+                },
+                data.premium match {
+                  case Some(value) => data.premium
+                  case None => account.premium
                 }
 
               )
@@ -318,7 +327,8 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
           Option(rs.getString("country")),
           Option(rs.getString("city")),
           Option(null),
-          Option(null)
+          Option(null),
+          getPremium(rs)
         ))
       } else {
         None
@@ -326,6 +336,12 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
       statmt.close()
       account
     }
+  }
+
+  private def getPremium(rs: ResultSet): Option[Premium] = {
+    val start = rs.getInt("start")
+    val finish = rs.getInt("finish")
+    if (start > 0 || finish > 0) Option(Premium(start, finish)) else None
   }
 
   private def getAccounts(sql: String)(implicit mc: MarkerContext): Option[Map[Int, Account]] = {
@@ -348,7 +364,8 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
         Option(rs.getString("country")),
         Option(rs.getString("city")),
         Option(null),
-        Option(null)
+        Option(null),
+        getPremium(rs)
       )
     }
     statmt.close()
@@ -359,28 +376,28 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
     }
   }
 
-  val sqlAccountWhere = "SELECT id, joined, status, email, fname, sname, phone, sex, birth, country, city from Accounts "
-  val sqlLikesWhere = "SELECT id, joined, status, email, fname, sname, phone, sex, birth, country, city from Accounts a inner join Likes l on a.id = l.liker "
-  val sqlInterestsWhere = "SELECT id, joined, status, email, fname, sname, phone, sex, birth, country, city from Accounts a inner join Interests i on a.id = i.acc "
-  val sqlInterestsLikesWhere = "SELECT id, joined, status, email, fname, sname, phone, sex, birth, country, city from Accounts a inner join Interests i on a.id = i.acc inner join Likes l on a.id = l.liker "
+  val sqlAccountWhere = "SELECT id, joined, status, email, fname, sname, phone, sex, birth, country, city, start, finish from Accounts "
+  val sqlLikesWhere = "SELECT id, joined, status, email, fname, sname, phone, sex, birth, country, city, start, finish from Accounts a inner join Likes l on a.id = l.liker "
+  val sqlInterestsWhere = "SELECT id, joined, status, email, fname, sname, phone, sex, birth, country, city, start, finish from Accounts a inner join Interests i on a.id = i.acc "
+  val sqlInterestsLikesWhere = "SELECT id, joined, status, email, fname, sname, phone, sex, birth, country, city, start, finish from Accounts a inner join Interests i on a.id = i.acc inner join Likes l on a.id = l.liker "
   val sqlAccount = sqlAccountWhere + " WHERE id="
 
 
   override def filter(list: Iterable[String], limit: Option[Int])(implicit mc: MarkerContext): Future[List[Account]] = {
     Future {
-      val table = if(list.exists(s => s.contains("likee in (")) && list.exists(s => s.contains("interests in "))) sqlInterestsLikesWhere
-      else if(list.exists(s => s.contains("likee in ("))) sqlLikesWhere
-      else if(list.exists(s => s.contains("interests in "))) sqlInterestsWhere
+      val table = if (list.exists(s => s.contains("likee in (")) && list.exists(s => s.contains("interests in "))) sqlInterestsLikesWhere
+      else if (list.exists(s => s.contains("likee in ("))) sqlLikesWhere
+      else if (list.exists(s => s.contains("interests in "))) sqlInterestsWhere
       else sqlAccountWhere
 
       getAccounts(table + (if (list.nonEmpty) " WHERE " + list.mkString(" AND ") else "") +
-        (if(table == sqlLikesWhere) " GROUP BY id, email, fname, sname, phone, sex, birth, country, city HAVING count(1) = " + list.filter(s => s.contains("likee in (")).head.split(",").length else "") +
+        (if (table == sqlLikesWhere) " GROUP BY id, email, fname, sname, phone, sex, birth, country, city, start, finish HAVING count(1) = " + list.filter(s => s.contains("likee in (")).head.split(",").length else "") +
         /* all */
-        (if(table == sqlInterestsWhere && list.exists(s => s.contains("interests in ("))) " GROUP BY id, email, fname, sname, phone, sex, birth, country, city HAVING count(1) = " + list.filter(s => s.contains("interests in (")).head.split(",").length else "") +
-        (if(table == sqlInterestsLikesWhere && list.exists(s => s.contains("interests in ("))) " GROUP BY id, email, fname, sname, phone, sex, birth, country, city HAVING count(1) = " + (list.filter(s => s.contains("interests in (")).head.split(",").length * list.filter(s => s.contains("likee in (")).head.split(",").length) else "") +
+        (if (table == sqlInterestsWhere && list.exists(s => s.contains("interests in ("))) " GROUP BY id, email, fname, sname, phone, sex, birth, country, city, start, finish HAVING count(1) = " + list.filter(s => s.contains("interests in (")).head.split(",").length else "") +
+        (if (table == sqlInterestsLikesWhere && list.exists(s => s.contains("interests in ("))) " GROUP BY id, email, fname, sname, phone, sex, birth, country, city, start, finish HAVING count(1) = " + (list.filter(s => s.contains("interests in (")).head.split(",").length * list.filter(s => s.contains("likee in (")).head.split(",").length) else "") +
         /* any */
-        (if((table == sqlInterestsWhere) && list.exists(s => s.contains("interests in  ("))) " GROUP BY id, email, fname, sname, phone, sex, birth, country, city HAVING count(1) > 0 " else "") +
-        (if((table == sqlInterestsLikesWhere) && list.exists(s => s.contains("interests in  ("))) " GROUP BY id, email, fname, sname, phone, sex, birth, country, city HAVING count(1) >= " + list.filter(s => s.contains("likee in (")).head.split(",").length else "") +
+        (if ((table == sqlInterestsWhere) && list.exists(s => s.contains("interests in  ("))) " GROUP BY id, email, fname, sname, phone, sex, birth, country, city, start, finish HAVING count(1) > 0 " else "") +
+        (if ((table == sqlInterestsLikesWhere) && list.exists(s => s.contains("interests in  ("))) " GROUP BY id, email, fname, sname, phone, sex, birth, country, city, start, finish HAVING count(1) >= " + list.filter(s => s.contains("likee in (")).head.split(",").length else "") +
         (limit match {
           case Some(i) => " LIMIT " + i
           case None => ""
@@ -395,15 +412,15 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
   override def group(keys: Iterable[String], list: Iterable[String], limit: Option[Int], order: Boolean)(implicit mc: MarkerContext): Future[List[Group]] = {
     Future {
       val sql = "SELECT " + keys.mkString(",") + ", count(1) as c FROM Accounts a " +
-        (if(list.exists(_ contains "interests =") || keys.exists(_=="interests")) " INNER JOIN Interests i on a.id = i.acc " else "") +
-        (if(list.exists(_ contains "likee =")) " INNER JOIN Likes l on a.id = l.liker " else "") +
+        (if (list.exists(_ contains "interests =") || keys.exists(_ == "interests")) " INNER JOIN Interests i on a.id = i.acc " else "") +
+        (if (list.exists(_ contains "likee =")) " INNER JOIN Likes l on a.id = l.liker " else "") +
         (if (list.nonEmpty) " WHERE " + list.mkString(" AND ") else "") +
         " GROUP BY " + keys.mkString(",") +
-        (if(order) " ORDER BY c desc," + keys.mkString(" desc, ") + " desc "  else " ORDER BY c," + keys.mkString(","))
-        (limit match {
-          case Some(i) => " LIMIT " + i
-          case None => ""
-        })
+        (if (order) " ORDER BY c desc," + keys.mkString(" desc, ") + " desc " else " ORDER BY c," + keys.mkString(","))
+      (limit match {
+        case Some(i) => " LIMIT " + i
+        case None => ""
+      })
       getGroups(sql, keys) match {
         case Some(list) => list
         case None => List()
@@ -411,9 +428,10 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
     }
   }
 
-  private def get(rs: ResultSet, name: String, key: Iterable[String]):Option[String] = {
-    Option(if(key.exists(_ == name)) rs.getString(name) else null)
+  private def get(rs: ResultSet, name: String, key: Iterable[String]): Option[String] = {
+    Option(if (key.exists(_ == name)) rs.getString(name) else null)
   }
+
   private def getGroups(sql: String, key: Iterable[String])(implicit mc: MarkerContext): Option[List[Group]] = {
     println(sql)
     val statmt = conn.createStatement()

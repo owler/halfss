@@ -11,7 +11,7 @@ import play.api.mvc.{Result, Results}
 import play.api.{Logger, MarkerContext}
 import v1.post.data._
 
-import scala.collection.{Map, mutable}
+import scala.collection.Map
 import scala.concurrent.Future
 import scala.io.Source
 
@@ -357,14 +357,22 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
 
   val sqlAccountWhere = "SELECT id, status, email, fname, sname, phone, sex, birth, country, city from Accounts "
   val sqlLikesWhere = "SELECT id, status, email, fname, sname, phone, sex, birth, country, city from Accounts a inner join Likes l on a.id = l.liker "
+  val sqlInterestsWhere = "SELECT id, status, email, fname, sname, phone, sex, birth, country, city from Accounts a inner join Interests i on a.id = i.acc "
   val sqlAccount = sqlAccountWhere + " WHERE id="
 
 
   override def filter(list: Iterable[String], limit: Option[Int])(implicit mc: MarkerContext): Future[List[Account]] = {
     Future {
-      val table = if(list.exists(s => s.contains("likee in ("))) sqlLikesWhere else sqlAccountWhere
+      val table = if(list.exists(s => s.contains("likee in ("))) sqlLikesWhere
+      else if(list.exists(s => s.contains("interests in "))) sqlInterestsWhere
+      else sqlAccountWhere
+
       getAccounts(table + (if (list.nonEmpty) " WHERE " + list.mkString(" AND ") else "") +
         (if(table == sqlLikesWhere) " GROUP BY id, email, fname, sname, phone, sex, birth, country, city HAVING count(1) = " + list.filter(s => s.contains("likee in (")).head.split(",").length else "") +
+        /* all */
+        (if(table == sqlInterestsWhere && list.exists(s => s.contains("interests in ("))) " GROUP BY id, email, fname, sname, phone, sex, birth, country, city HAVING count(1) = " + list.filter(s => s.contains("interests in (")).head.split(",").length else "") +
+        /* any */
+        (if(table == sqlInterestsWhere && list.exists(s => s.contains("interests in  ("))) " GROUP BY id, email, fname, sname, phone, sex, birth, country, city HAVING count(1) > 0 " else "") +
         (limit match {
           case Some(i) => " LIMIT " + i
           case None => ""

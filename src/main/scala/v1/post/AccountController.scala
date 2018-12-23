@@ -142,7 +142,6 @@ class AccountController @Inject()(cc: PostControllerComponents)(implicit ec: Exe
         BadRequest
       }
     } else {
-
       postResourceHandler.filter(list, limit).map(
         l => Ok(Json.obj("accounts" -> l))
       )

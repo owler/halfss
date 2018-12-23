@@ -75,7 +75,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
   @throws[SQLException]
   def createDB(): Unit = {
     val statmt = conn.createStatement()
-    statmt.execute("CREATE TABLE if not exists Accounts (id INTEGER PRIMARY KEY, status text,email text, fname text, sname text, phone text, sex text, birth integer, country text, city text);")
+    statmt.execute("CREATE TABLE if not exists Accounts (id INTEGER PRIMARY KEY, joined INTEGER, status text,email text, fname text, sname text, phone text, sex text, birth integer, country text, city text);")
     statmt.execute("CREATE TABLE if not exists Likes (liker INTEGER, likee INTEGER, ts integer);")
     statmt.execute("CREATE TABLE if not exists Interests (acc INTEGER, interests INTEGER);")
     statmt.close()
@@ -132,10 +132,11 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
     try {
     val interes = accounts.map(a => a.id -> a.interests.map(v => addInterests(v))).toMap
     println(interes(1))
-    val sb = new StringBuffer("INSERT INTO Accounts (id, status, email, fname, sname, phone, sex, birth, country, city) VALUES ")
+    val sb = new StringBuffer("INSERT INTO Accounts (id, joined, status, email, fname, sname, phone, sex, birth, country, city) VALUES ")
       .append(
         accounts.map(account =>
           new StringBuffer("(").append(account.id).append(",")
+            .append(account.joined).append(",")
             .append(unwrap(account.status)).append(",'")
             .append(account.email).append("',")
             .append(unwrap(account.fname)).append(",")
@@ -206,7 +207,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
   }
 
   private def isEmailExists(email: String): Boolean = {
-    getAccounts("SELECT id, email, fname, sname, phone, sex, birth, country, city from Accounts WHERE email='" + email + "'") match {
+    getAccounts("SELECT id, joined, email, fname, sname, phone, sex, birth, country, city from Accounts WHERE email='" + email + "'") match {
       case None => false
       case Some(map) => true
     }
@@ -224,6 +225,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
               Results.BadRequest
             } else {
               val updatedAccount = Account(account.id,
+                data.joined.getOrElse(account.joined),
                 data.status match {
                   case Some(v) => data.status
                   case None => account.status
@@ -305,6 +307,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
       val rs = statmt.executeQuery(sqlAccount + id)
       val account = if (rs.next()) {
         Some(Account(rs.getInt("id"),
+          rs.getInt("joined"),
           Option(rs.getString("status")),
           rs.getString("email"),
           Option(rs.getString("fname")),
@@ -334,6 +337,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
     while (rs.next()) {
       val id = rs.getInt("id")
       map += id -> Account(id,
+        rs.getInt("joined"),
         Option(rs.getString("status")),
         rs.getString("email"),
         Option(rs.getString("fname")),

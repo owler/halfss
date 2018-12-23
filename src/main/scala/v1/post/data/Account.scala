@@ -7,9 +7,9 @@ import play.api.libs.json._
 /**
   * Created by owler on 12/16/2018.
   */
-final case class Account(id: Int, status: Option[String], email: String, fname: Option[String], sname: Option[String], phone: Option[String], sex: String, birth: Int, country: Option[String], city: Option[String], interests: Option[List[String]], likes: Option[List[Like]] )
+final case class Account(id: Int, joined: Int, status: Option[String], email: String, fname: Option[String], sname: Option[String], phone: Option[String], sex: String, birth: Int, country: Option[String], city: Option[String], interests: Option[List[String]], likes: Option[List[Like]] )
 
-final case class AccountPost(status: Option[String], email: Option[String], fname: Option[String], sname: Option[String], phone: Option[String], sex: Option[String], birth: Option[Int], country: Option[String], city: Option[String], interests: Option[List[String]], likes: Option[List[Like]]) {
+final case class AccountPost(joined: Option[Int], status: Option[String], email: Option[String], fname: Option[String], sname: Option[String], phone: Option[String], sex: Option[String], birth: Option[Int], country: Option[String], city: Option[String], interests: Option[List[String]], likes: Option[List[Like]]) {
   def verify: Boolean = {
     email.map(_.length <= 100).getOrElse(true) && fname.map(_.length <= 50).getOrElse(true) &&
       sname.map(_.length <= 50).getOrElse(true) && sex.map(g => g == "m" || g == "f").getOrElse(true)
@@ -44,6 +44,7 @@ object Account {
 
   implicit val implicitRead : Reads[Account] = (
     (JsPath \ "id").read[Int] and
+    (JsPath \ "joined").read[Int] and
     (JsPath \ "status").readNullable[String] and
     (JsPath \ "email").read[String] and
     (JsPath \ "fname").readNullable[String] and
@@ -60,6 +61,7 @@ object Account {
 
 object AccountPost {
    implicit val implicitRead : Reads[AccountPost] = (
+     (JsPath \ "joined").readNullable[Int] and
      (JsPath \ "status").readNullable[String] and
       (JsPath \ "email").readNullable[String] and
         (JsPath \ "fname").readNullable[String] and

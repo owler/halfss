@@ -126,7 +126,7 @@ class AccountController @Inject()(cc: PostControllerComponents)(implicit ec: Exe
     } else {
 
       postResourceHandler.filter(list, limit).map(
-        l => Ok(Json.toJson(l))
+        l => Ok(Json.obj("accounts" -> l))
       )
     }
   }

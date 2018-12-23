@@ -13,6 +13,7 @@ case class TravelFormInput(body: String)
 
 trait Mstr {
   def prefix: String
+
   def allowed: List[String]
 
   def validate(in: String): Option[String] = {
@@ -30,63 +31,76 @@ trait Mstr {
 
 object Eq extends Mstr {
   val allowed = List("sex", "status", "fname", "sname", "country", "city")
+
   override def prefix: String = "_eq"
 }
 
 object Gt extends Mstr {
   override def prefix: String = "_gt"
+
   override def allowed = List("email", "birth")
 }
 
 object Lt extends Mstr {
   override def prefix: String = "_lt"
+
   override def allowed = List("email", "birth")
 }
 
 object Domain extends Mstr {
   override def prefix: String = "_domain"
+
   override def allowed: List[String] = List("email")
 }
 
 object Any extends Mstr {
   override def prefix: String = "_any"
+
   override def allowed: List[String] = List("fname", "city", "interests")
 }
 
 object Neq extends Mstr {
   override def prefix: String = "_neq"
+
   override def allowed: List[String] = List("status")
 }
 
 object Null extends Mstr {
   override def prefix: String = "_null"
+
   override def allowed: List[String] = List("fname", "sname", "phone", "country", "city", "premium")
 }
 
 object Starts extends Mstr {
   override def prefix: String = "_starts"
+
   override def allowed: List[String] = List("sname")
 }
 
 object Code extends Mstr {
   override def prefix: String = "_code"
+
   override def allowed: List[String] = List("phone")
 }
 
 object Year extends Mstr {
   override def prefix: String = "_year"
+
   override def allowed: List[String] = List("birth")
 }
 
 object Contains extends Mstr {
   override def prefix: String = "_contains"
+
   override def allowed: List[String] = List("interests", "likes")
 }
 
 object Now extends Mstr {
   override def prefix: String = "_now"
+
   override def allowed: List[String] = List("premium")
 }
+
 /**
   * Takes HTTP requests and produces JSON.
   */
@@ -99,28 +113,28 @@ class AccountController @Inject()(cc: PostControllerComponents)(implicit ec: Exe
   def filter: Action[AnyContent] = PostAction.async { implicit request =>
     val limit = request.getQueryString("limit").map(_.toInt)
     val list = request.queryString.filterNot(x => x._1 == "query_id" || x._1 == "limit").map(l => l._1 match {
-        case Eq(name) => name + "='" + l._2.head + "'"
-        case Contains(name) if name=="likes" => "likee in (" + l._2.head.split(",").toList.sorted.mkString(",") + ")"
-        case Contains(name) if name=="interests" => name + " in (" + cc.postRepository.wrapInterests(l._2.head.split(",").toList).sorted.mkString(",") + ")"
-        case Any(name) if name == "interests" => name + " in  (" + cc.postRepository.wrapInterests(l._2.head.split(",").toList).sorted.mkString(",") + ")"
-        case Neq(name) => name + "!='" + l._2.head + "'"
-        case Starts(name) => name + " like '" + l._2.head + "%'"
-        case Code(name) => name + " like '%(" + l._2.head + ")%'"
-        case Year(name) => val y = y_from_to(l._2.head.toInt); name + " >= " + y._1 + " AND " + name + " < " + y._2
-        case Null(name) => name + (l._2.head match {
-          case "0" => " is not null"
-          case "1" => " is null"
-        })
-        case Lt(name) if name == "birth" => name + "<" + l._2.head
-        case Lt(name) => name + "<'" + l._2.head + "'"
-        case Gt(name) if name == "birth" => name + ">" + l._2.head
-        case Gt(name) => name + ">'" + l._2.head + "'"
-        case Domain(name) => name + " like '%" + l._2.head + "'"
-        case Any(name) => name + " in (" + l._2.head.split(",").map(s => "'" + s + "'").mkString(",") + ")"
-        case _ => null
+      case Eq(name) => name + "='" + l._2.head + "'"
+      case Contains(name) if name == "likes" => "likee in (" + l._2.head.split(",").toList.sorted.mkString(",") + ")"
+      case Contains(name) if name == "interests" => name + " in (" + cc.postRepository.wrapInterests(l._2.head.split(",").toList).sorted.mkString(",") + ")"
+      case Any(name) if name == "interests" => name + " in  (" + cc.postRepository.wrapInterests(l._2.head.split(",").toList).sorted.mkString(",") + ")"
+      case Neq(name) => name + "!='" + l._2.head + "'"
+      case Starts(name) => name + " like '" + l._2.head + "%'"
+      case Code(name) => name + " like '%(" + l._2.head + ")%'"
+      case Year(name) => val y = y_from_to(l._2.head.toInt); name + " >= " + y._1 + " AND " + name + " < " + y._2
+      case Null(name) => name + (l._2.head match {
+        case "0" => " is not null"
+        case "1" => " is null"
+      })
+      case Lt(name) if name == "birth" => name + "<" + l._2.head
+      case Lt(name) => name + "<'" + l._2.head + "'"
+      case Gt(name) if name == "birth" => name + ">" + l._2.head
+      case Gt(name) => name + ">'" + l._2.head + "'"
+      case Domain(name) => name + " like '%" + l._2.head + "'"
+      case Any(name) => name + " in (" + l._2.head.split(",").map(s => "'" + s + "'").mkString(",") + ")"
+      case _ => null
     })
     if (list.exists(_ == null)) {
-      Future{
+      Future {
         BadRequest
       }
     } else {
@@ -175,17 +189,23 @@ class AccountController @Inject()(cc: PostControllerComponents)(implicit ec: Exe
   def group: Action[AnyContent] = PostAction.async { implicit request =>
     val limit = request.getQueryString("limit").map(_.toInt)
     val order = request.getQueryString("order").map(_.toInt).map(_ == -1)
-    val keys = request.getQueryString("keys").map(_.split(",")).get
-    val list = request.queryString.filterNot(x => x._1 == "query_id" || x._1 == "limit" ||
-      x._1 == "keys" || x._1 == "order").map(l => l._1 match {
-      case "likes" => "likee = " + l._2.head.toInt
-      case "interests" => "interests = " + cc.postRepository.wrapInterests(List(l._2.head)).head
-      case "birth" => val y = y_from_to(l._2.head.toInt); "birth >= " + y._1 + " AND birth < " + y._2
-      case name => name + "='" + l._2.head + "'"
-    })
-    postResourceHandler.group(keys, list, limit, order.getOrElse(true)).map(
-      l => Ok(Json.obj("groups" -> l))
-    )
+    request.getQueryString("keys").map(_.split(",")) match {
+      case Some(keys) => {
+        val list = request.queryString.filterNot(x => x._1 == "query_id" || x._1 == "limit" ||
+          x._1 == "keys" || x._1 == "order").map(l => l._1 match {
+          case "likes" => "likee = " + l._2.head.toInt
+          case "interests" => "interests = " + cc.postRepository.wrapInterests(List(l._2.head)).head
+          case "birth" => val y = y_from_to(l._2.head.toInt); "birth >= " + y._1 + " AND birth < " + y._2
+          case name => name + "='" + l._2.head + "'"
+        })
+        postResourceHandler.group(keys, list, limit, order.getOrElse(true)).map(
+          l => Ok(Json.obj("groups" -> l))
+        )
+      }
+      case None => Future {
+        BadRequest
+      }
+    }
   }
 
   def y_from_to(year: Int) = {

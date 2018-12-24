@@ -129,6 +129,10 @@ class AccountController @Inject()(cc: PostControllerComponents)(implicit ec: Exe
         case "0" => " is not null"
         case "1" => " is null"
       })
+      case Now(name) => l._2.head match {
+        case "1" => "start <= " + cc.postRepository.getNow + " AND finish >= " + cc.postRepository.getNow
+        case _ => null
+      }
       case Lt(name) if name == "birth" => name + "<" + l._2.head
       case Lt(name) => name + "<'" + l._2.head + "'"
       case Gt(name) if name == "birth" => name + ">" + l._2.head

@@ -55,7 +55,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
   val rootzip = new java.util.zip.ZipFile("./data.zip")
   var now = 0L //Source.fromFile("/tmp/data/options.txt").getLines.toList.head.toLong * 1000
   rootzip.entries.asScala.filter(_.getName.contains("options")).foreach(e =>
-    now = Source.fromInputStream(rootzip.getInputStream(e)).getLines.toList.head.toLong * 1000
+    now = Source.fromInputStream(rootzip.getInputStream(e)).getLines.toList.head.toLong
   )
   println("data.zip timestamp " + new Date(now))
 
@@ -225,7 +225,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
         getAccounts(sqlAccount + id) match {
           case None => logger.error("Wrong request,Account  id not found?" + id); Results.NotFound
           case Some(map) =>
-            val account = map.values.head
+            val account = map.head
             if (data.email.isDefined && account.email != data.email.get && isEmailExists(data.email.get)) {
               Results.BadRequest
             } else {
@@ -344,15 +344,15 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
     if (start > 0 || finish > 0) Option(Premium(start, finish)) else None
   }
 
-  private def getAccounts(sql: String)(implicit mc: MarkerContext): Option[Map[Int, Account]] = {
+  private def getAccounts(sql: String)(implicit mc: MarkerContext): Option[List[Account]] = {
     println(sql)
     val statmt = conn.createStatement()
     val rs = statmt.executeQuery(sql)
-    var map = Map[Int, Account]()
+    var list = List[Account]()
 
     while (rs.next()) {
       val id = rs.getInt("id")
-      map += id -> Account(id,
+      list = list :+ Account(id,
         rs.getInt("joined"),
         Option(rs.getString("status")),
         rs.getString("email"),
@@ -369,10 +369,10 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
       )
     }
     statmt.close()
-    if (map.isEmpty) {
+    if (list.isEmpty) {
       None
     } else {
-      Some(map)
+      Some(list)
     }
   }
 
@@ -389,21 +389,22 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
       else if (list.exists(s => s.contains("likee in ("))) sqlLikesWhere
       else if (list.exists(s => s.contains("interests in "))) sqlInterestsWhere
       else sqlAccountWhere
-
+      val columns = "id, email, fname, sname, phone, sex, birth, country, city, start, finish"
       getAccounts(table + (if (list.nonEmpty) " WHERE " + list.mkString(" AND ") else "") +
-        (if (table == sqlLikesWhere) " GROUP BY id, email, fname, sname, phone, sex, birth, country, city, start, finish HAVING count(1) = " + list.filter(s => s.contains("likee in (")).head.split(",").length else "") +
+        (if (table == sqlLikesWhere) " GROUP BY " + columns + " HAVING count(1) = " + list.filter(s => s.contains("likee in (")).head.split(",").length else "") +
         /* all */
-        (if (table == sqlInterestsWhere && list.exists(s => s.contains("interests in ("))) " GROUP BY id, email, fname, sname, phone, sex, birth, country, city, start, finish HAVING count(1) = " + list.filter(s => s.contains("interests in (")).head.split(",").length else "") +
-        (if (table == sqlInterestsLikesWhere && list.exists(s => s.contains("interests in ("))) " GROUP BY id, email, fname, sname, phone, sex, birth, country, city, start, finish HAVING count(1) = " + (list.filter(s => s.contains("interests in (")).head.split(",").length * list.filter(s => s.contains("likee in (")).head.split(",").length) else "") +
+        (if (table == sqlInterestsWhere && list.exists(s => s.contains("interests in ("))) " GROUP BY " + columns + " HAVING count(1) = " + list.filter(s => s.contains("interests in (")).head.split(",").length else "") +
+        (if (table == sqlInterestsLikesWhere && list.exists(s => s.contains("interests in ("))) " GROUP BY " + columns + " HAVING count(1) = " + (list.filter(s => s.contains("interests in (")).head.split(",").length * list.filter(s => s.contains("likee in (")).head.split(",").length) else "") +
         /* any */
-        (if ((table == sqlInterestsWhere) && list.exists(s => s.contains("interests in  ("))) " GROUP BY id, email, fname, sname, phone, sex, birth, country, city, start, finish HAVING count(1) > 0 " else "") +
-        (if ((table == sqlInterestsLikesWhere) && list.exists(s => s.contains("interests in  ("))) " GROUP BY id, email, fname, sname, phone, sex, birth, country, city, start, finish HAVING count(1) >= " + list.filter(s => s.contains("likee in (")).head.split(",").length else "") +
+        (if ((table == sqlInterestsWhere) && list.exists(s => s.contains("interests in  ("))) " GROUP BY " + columns + " HAVING count(1) > 0 " else "") +
+        (if ((table == sqlInterestsLikesWhere) && list.exists(s => s.contains("interests in  ("))) " GROUP BY " + columns + " HAVING count(1) >= " + list.filter(s => s.contains("likee in (")).head.split(",").length else "") +
+        " ORDER BY id desc " +
         (limit match {
           case Some(i) => " LIMIT " + i
           case None => ""
         })
       ) match {
-        case Some(map) => map.values.toList
+        case Some(list) => list
         case None => List()
       }
     }

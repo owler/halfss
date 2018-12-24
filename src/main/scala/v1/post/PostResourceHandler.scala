@@ -80,8 +80,8 @@ class PostResourceHandler @Inject()(
       u.sname.map(_.length <= 50).getOrElse(true) && (u.sex == "m" || u.sex == "f")
   }
 
-  def filter(list: Iterable[String], limit: Option[Int])(implicit mc: MarkerContext): Future[List[Account]] = {
-    postRepository.filter(list, limit)
+  def filter(keys: Iterable[String], list: Iterable[String], limit: Option[Int])(implicit mc: MarkerContext): Future[List[Account]] = {
+    postRepository.filter(keys, list, limit)
   }
 
   def group(keys: Iterable[String], list: Iterable[String], limit: Option[Int], order: Boolean)(implicit mc: MarkerContext): Future[List[Group]] = {

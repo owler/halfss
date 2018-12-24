@@ -113,40 +113,41 @@ class AccountController @Inject()(cc: PostControllerComponents)(implicit ec: Exe
   def filter: Action[AnyContent] = PostAction.async { implicit request =>
     val limit = request.getQueryString("limit").map(_.toInt)
     val list = request.queryString.filterNot(x => x._1 == "query_id" || x._1 == "limit").map(l => l._1 match {
-      case Eq(name) => name + "='" + l._2.head + "'"
-      case Contains(name) if name == "likes" => "likee in (" + l._2.head.split(",").toList.sorted.mkString(",") + ")"
-      case Contains(name) if name == "interests" => name + " in (" + cc.postRepository.wrapInterests(l._2.head.split(",").toList).sorted.mkString(",") + ")"
-      case Any(name) if name == "interests" => name + " in  (" + cc.postRepository.wrapInterests(l._2.head.split(",").toList).sorted.mkString(",") + ")"
-      case Neq(name) => name + "!='" + l._2.head + "'"
-      case Starts(name) => name + " like '" + l._2.head + "%'"
-      case Code(name) => name + " like '%(" + l._2.head + ")%'"
-      case Year(name) => val y = y_from_to(l._2.head.toInt); name + " >= " + y._1 + " AND " + name + " < " + y._2
-      case Null(name) if name=="premium" => "start" + (l._2.head match {
+      case Eq(name) => (name, name + "='" + l._2.head + "'")
+      case Contains(name) if name == "likes" => ("likee", "likee in (" + l._2.head.split(",").toList.sorted.mkString(",") + ")")
+      case Contains(name) if name == "interests" => (name, name + " in (" + cc.postRepository.wrapInterests(l._2.head.split(",").toList).sorted.mkString(",") + ")")
+      case Any(name) if name == "interests" => (name, name + " in  (" + cc.postRepository.wrapInterests(l._2.head.split(",").toList).sorted.mkString(",") + ")")
+      case Neq(name) => (name, name + "!='" + l._2.head + "'")
+      case Starts(name) => (name, name + " like '" + l._2.head + "%'")
+      case Code(name) => (name, name + " like '%(" + l._2.head + ")%'")
+      case Year(name) => val y = y_from_to(l._2.head.toInt); (name, name + " >= " + y._1 + " AND " + name + " < " + y._2)
+      case Null(name) if name=="premium" => ("start, finish", "start" + (l._2.head match {
         case "0" => " is not null"
         case "1" => " is null"
-      })
-      case Null(name) => name + (l._2.head match {
+      }))
+      case Null(name) => (name, name + (l._2.head match {
         case "0" => " is not null"
         case "1" => " is null"
-      })
+      }))
       case Now(name) => l._2.head match {
-        case "1" => "start <= " + cc.postRepository.getNow + " AND finish >= " + cc.postRepository.getNow
+        case "1" => ("start, finish", "start <= " + cc.postRepository.getNow + " AND finish >= " + cc.postRepository.getNow)
         case _ => null
       }
-      case Lt(name) if name == "birth" => name + "<" + l._2.head
-      case Lt(name) => name + "<'" + l._2.head + "'"
-      case Gt(name) if name == "birth" => name + ">" + l._2.head
-      case Gt(name) => name + ">'" + l._2.head + "'"
-      case Domain(name) => name + " like '%" + l._2.head + "'"
-      case Any(name) => name + " in (" + l._2.head.split(",").map(s => "'" + s + "'").mkString(",") + ")"
-      case _ => null
+      case Lt(name) if name == "birth" => (name, name + "<" + l._2.head)
+      case Lt(name) => (name, name + "<'" + l._2.head + "'")
+      case Gt(name) if name == "birth" => (name, name + ">" + l._2.head)
+      case Gt(name) => (name, name + ">'" + l._2.head + "'")
+      case Domain(name) => (name, name + " like '%" + l._2.head + "'")
+      case Any(name) => (name, name + " in (" + l._2.head.split(",").map(s => "'" + s + "'").mkString(",") + ")")
+      case _ => ("", null)
     })
-    if (list.exists(_ == null)) {
+    val params = list.values
+    if (params.exists(_ == null)) {
       Future {
         BadRequest
       }
     } else {
-      postResourceHandler.filter(list, limit).map(
+      postResourceHandler.filter(list.keys, params, limit).map(
         l => Ok(Json.obj("accounts" -> l))
       )
     }

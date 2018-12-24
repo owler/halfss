@@ -7,7 +7,7 @@ import play.api.libs.json._
 /**
   * Created by owler on 12/16/2018.
   */
-final case class Account(id: Int, joined: Int, status: Option[String], email: String, fname: Option[String], sname: Option[String], phone: Option[String], sex: String, birth: Int, country: Option[String], city: Option[String], interests: Option[List[String]], likes: Option[List[Like]], premium: Option[Premium] )
+final case class Account(id: Int, joined: Option[Int], status: Option[String], email: String, fname: Option[String], sname: Option[String], phone: Option[String], sex: Option[String], birth: Option[Int], country: Option[String], city: Option[String], interests: Option[List[String]], likes: Option[List[Like]], premium: Option[Premium] )
 
 final case class AccountPost(joined: Option[Int], status: Option[String], email: Option[String], fname: Option[String], sname: Option[String], phone: Option[String], sex: Option[String], birth: Option[Int], country: Option[String], city: Option[String], interests: Option[List[String]], likes: Option[List[Like]], premium: Option[Premium]) {
   def verify: Boolean = {
@@ -48,14 +48,14 @@ object Account {
 
   implicit val implicitRead : Reads[Account] = (
     (JsPath \ "id").read[Int] and
-    (JsPath \ "joined").read[Int] and
+    (JsPath \ "joined").readNullable[Int] and
     (JsPath \ "status").readNullable[String] and
     (JsPath \ "email").read[String] and
     (JsPath \ "fname").readNullable[String] and
     (JsPath \ "sname").readNullable[String] and
     (JsPath \ "phone").readNullable[String] and
-    (JsPath \ "sex").read[String] and
-    (JsPath \ "birth").read[Int] and
+    (JsPath \ "sex").readNullable[String] and
+    (JsPath \ "birth").readNullable[Int] and
     (JsPath \ "country").readNullable[String] and
     (JsPath \ "city").readNullable[String] and
     (JsPath \ "interests").readNullable[List[String]] and

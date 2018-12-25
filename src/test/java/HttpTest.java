@@ -18,8 +18,8 @@ import java.util.concurrent.Executors;
 public class HttpTest {
 
     private ExecutorService centralExecutor;
-    private String url = "http://192.168.10.223:80";
-    //private String url = "localhost:80";
+    //private String url = "http://192.168.10.223:80";
+    private String url = "http://localhost:80";
 
     @Before
     public void setUp() throws Exception {
@@ -84,8 +84,8 @@ public class HttpTest {
     @Test
     public void testPost() throws Exception {
         long _start = System.currentTimeMillis();
-        final CountDownLatch countDownLatch = new CountDownLatch(3000);
-        for (int i = 1; i <= 1500; i++) {
+        final CountDownLatch countDownLatch = new CountDownLatch(1);
+        for (int i = 1; i <= 1; i++) {
             final int id = i;
 
             centralExecutor.submit(() -> {
@@ -97,15 +97,7 @@ public class HttpTest {
                     countDownLatch.countDown();
                 }
             });
-            centralExecutor.submit(() -> {
-                try {
-                    get(url + "/visits/" + id);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                } finally {
-                    countDownLatch.countDown();
-                }
-            });
+
         }
         countDownLatch.await();
         System.out.println("All takes " + (System.currentTimeMillis() - _start));
@@ -133,10 +125,10 @@ public class HttpTest {
     public void post(int id) throws Exception {
         long start = System.currentTimeMillis();
         try {
-            byte[] out = "{\"user\": 99}".getBytes();
+            byte[] out = "{\"email\": \"owl@tut.by\"}".getBytes();
             int length = out.length;
 
-            URL u = new URL(url + "/visits/" + id);
+            URL u = new URL(url + "/accounts/" + id);
             HttpURLConnection conn = (HttpURLConnection) u.openConnection();
 
             conn.setFixedLengthStreamingMode(length);

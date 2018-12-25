@@ -94,7 +94,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
     rootzip.entries.asScala.
       filter(_.getName.endsWith(".json")).
       foreach { e =>
-        println(e.getName)
+        println("loading " + e.getName)
         val json: JsValue = Json.parse(rootzip.getInputStream(e))
         e match {
           case _ if e.getName.contains("accounts") =>
@@ -102,7 +102,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
             json.validate[Seq[Account]](Accounts) match {
               case s: JsSuccess[Seq[Account]] => writeAccounts(s.get)
               case e: JsError =>
-                println(e)
+                println("Error loading DB " + e)
             }
         }
       }
@@ -134,7 +134,6 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
     val statmt = conn.createStatement()
     try {
       val interes = accounts.map(a => a.id -> a.interests.map(v => addInterests(v))).toMap
-      println(interes(1))
       val sb = new StringBuffer("INSERT INTO Accounts (id, joined, status, email, fname, sname, phone, sex, birth, country, city, start, finish) VALUES ")
         .append(
           accounts.map(account =>
@@ -155,6 +154,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
         )
         .append(";")
       statmt.execute(sb.toString)
+
       val sb2 = new StringBuffer("INSERT INTO Likes (liker, likee, ts) VALUES ")
         .append(
           accounts.flatMap(account => account.likes.map(listLikes => listLikes.map(l =>
@@ -162,8 +162,9 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
               .append(l.id).append(",")
               .append(l.ts).append(")").toString))
           ).flatten.mkString(",")).append(";")
-
-      statmt.execute(sb2.toString)
+      if(sb2.toString.contains("VALUES (")) {
+        statmt.execute(sb2.toString)
+      }
 
       val sb3 = new StringBuffer("INSERT INTO Interests (acc, interests) VALUES ")
         .append(
@@ -171,10 +172,11 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
             new StringBuffer("(").append(account.id).append(",")
               .append(interests.indexOf(l)).append(")").toString))
           ).flatten.mkString(",")).append(";")
-
-      statmt.execute(sb3.toString)
+      if(sb3.toString.contains("VALUES (")) {
+        statmt.execute(sb3.toString)
+      }
     } catch {
-      case e: Throwable => println(e)
+      case e: Throwable => println("Error " + e)
     }
     statmt.close()
   }
@@ -360,7 +362,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
   }
 
   private def getAccounts(columns: Set[String], sql: String)(implicit mc: MarkerContext): Option[List[Account]] = {
-    println(sql)
+    println("SQL: " + sql)
     val statmt = conn.createStatement()
     val rs = statmt.executeQuery(sql)
     var list = List[Account]()
@@ -453,7 +455,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
   }
 
   private def getGroups(sql: String, key: Iterable[String])(implicit mc: MarkerContext): Option[List[Group]] = {
-    println(sql)
+    println("SQL: " + sql)
     val statmt = conn.createStatement()
     val rs = statmt.executeQuery(sql)
     var list = List[Group]()

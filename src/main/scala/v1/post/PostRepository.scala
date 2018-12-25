@@ -286,7 +286,6 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
                   case Some(value) => data.premium
                   case None => account.premium
                 }
-
               )
               deleteObj(updatedAccount.id, "Accounts")
               writeAccounts(List(updatedAccount))

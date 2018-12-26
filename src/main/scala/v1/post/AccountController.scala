@@ -188,8 +188,8 @@ class AccountController @Inject()(cc: PostControllerComponents)(implicit ec: Exe
 
   def recommend(id: Int): Action[AnyContent] = PostAction.async { implicit request =>
     postResourceHandler.recommend(id).map {
-      case None => NotFound
-      case Some(account) => Ok(Json.toJson(account))
+      case l @ x::y => Ok(Json.toJson(l))
+      case _ => NotFound
     }
   }
 

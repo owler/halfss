@@ -394,13 +394,23 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
     }
   }
 
+  import collection.JavaConverters._
   override def recommend(id: Int)(implicit mc: MarkerContext): Future[List[Account]] = {
     getAccount(id).map {
       case None => List()
       case Some(a) =>
         println(a.id)
-        val statm = conn.prepareStatement("select id from Accounts a inner join Interests i on a.id = i.acc where sex = ? and status = ? and interests in (?) group by id having count(1) > 1 order by count(1) desc, ABS(birth - ?)  ")
-        getAccounts(Set(), "") match {
+        val query = conn.prepareStatement("select id from Accounts a inner join Interests i on a.id = i.acc where sex = ? and status = ? and interests in (?) group by id having count(1) > 1 order by count(1) desc, ABS(birth - ?)  ")
+        query.setString(1, a.sex.getOrElse("m"))
+        query.setString(2, "свободен")
+        query.setArray(3, conn.createArrayOf("VARCHAR", List(1).asJava.toArray))
+        query.setInt(4, a.birth.getOrElse(0))
+        val rs = query.executeQuery()
+        var listIds = List[Int]()
+        while (rs.next()) {
+          listIds = rs.getInt("id") :: listIds
+        }
+        getAccounts(Set(), sqlAccounts + " (" + listIds.mkString(",") + ")") match {
           case None => List()
           case Some(list) => list
         }
@@ -413,6 +423,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
   def sqlInterestsWhere(columns: String) = "SELECT " + columns + " from Accounts a inner join Interests i on a.id = i.acc "
   def sqlInterestsLikesWhere(columns: String) = "SELECT " + columns + " from Accounts a inner join Interests i on a.id = i.acc inner join Likes l on a.id = l.liker "
   val sqlAccount = sqlAccountWhere(full_columns) + " WHERE id="
+  val sqlAccounts = sqlAccountWhere(full_columns) + " WHERE id in "
 
 
   override def filter(keys: Iterable[String], list: Iterable[String], limit: Option[Int])(implicit mc: MarkerContext): Future[List[Account]] = {

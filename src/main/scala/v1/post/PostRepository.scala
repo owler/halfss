@@ -11,7 +11,6 @@ import play.api.mvc.{Result, Results}
 import play.api.{Logger, MarkerContext}
 import v1.post.data._
 
-import scala.collection.Map
 import scala.concurrent.Future
 import scala.io.Source
 
@@ -31,6 +30,7 @@ trait PostRepository {
   def updateAccount(id: Int, data: AccountPost)(implicit mc: MarkerContext): Future[Result]
 
   def getAccount(id: Int)(implicit mc: MarkerContext): Future[Option[Account]]
+  def recommend(id: Int)(implicit mc: MarkerContext): Future[List[Account]]
 
   def filter(keys: Iterable[String], list: Iterable[String], limit: Option[Int])(implicit mc: MarkerContext): Future[List[Account]]
 
@@ -355,6 +355,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
     }
   }
 
+
   private def getPremium(rs: ResultSet): Option[Premium] = {
     val start = rs.getInt("start")
     val finish = rs.getInt("finish")
@@ -390,6 +391,19 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
       None
     } else {
       Some(list)
+    }
+  }
+
+  override def recommend(id: Int)(implicit mc: MarkerContext): Future[List[Account]] = {
+    getAccount(id).map {
+      case None => List()
+      case Some(a) =>
+        println(a.id)
+        val statm = conn.prepareStatement("select id from Accounts a inner join Interests i on a.id = i.acc where sex = ? and status = ? and interests in (?) group by id having count(1) > 1 order by count(1) desc, ABS(birth - ?)  ")
+        getAccounts(Set(), "") match {
+          case None => List()
+          case Some(list) => list
+        }
     }
   }
 

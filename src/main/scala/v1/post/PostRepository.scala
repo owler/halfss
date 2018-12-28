@@ -401,11 +401,11 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
       case None => List()
       case Some(a) =>
         println(a.id)
-        val query = conn.prepareStatement("select id from Accounts a inner join Interests i on a.id = i.acc where sex = ? and status = ? and interests in (?) group by id having count(1) > 1 order by count(1) desc, ABS(birth - ?)  ")
+        val query = conn.prepareStatement("select id from Accounts a inner join Interests i on a.id = i.acc where sex = ? and status = ? and interests in (1,2,3) group by id having count(1) > 1 order by count(1) desc, ABS(birth - ?)  ")
         query.setString(1, a.sex.getOrElse("m"))
-        query.setString(2, "свободен")
-        query.setArray(3, conn.createArrayOf("VARCHAR", List(1).asJava.toArray))
-        query.setInt(4, a.birth.getOrElse(0))
+        query.setString(2, "свободны")
+        //query.setArray(3, conn.createArrayOf("VARCHAR", List(1).asJava.toArray))
+        query.setInt(3, a.birth.getOrElse(0))
         val rs = query.executeQuery()
         var listIds = List[Int]()
         while (rs.next()) {
@@ -418,7 +418,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
     }
   }
 
-  val full_columns = "id, email, fname, sname, phone, sex, birth, country, city, start, finish"
+  val full_columns = "id, joined, status, email, fname, sname, phone, sex, birth, country, city, start, finish"
   def sqlAccountWhere(columns: String) = "SELECT " + columns + " from Accounts "
   def sqlLikesWhere(columns: String) = "SELECT " + columns + " from Accounts a inner join Likes l on a.id = l.liker "
   def sqlInterestsWhere(columns: String) = "SELECT " + columns + " from Accounts a inner join Interests i on a.id = i.acc "

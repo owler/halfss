@@ -411,7 +411,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
         while (rs.next()) {
           listIds = rs.getInt("id") :: listIds
         }
-        getAccounts(Set(), sqlAccounts + " (" + listIds.mkString(",") + ")") match {
+        getAccounts(Set("status", "fname", "sname", "birth", "start", "finish"), sqlAccounts + " (" + listIds.mkString(",") + ")") match {
           case None => List()
           case Some(list) => list
         }

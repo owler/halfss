@@ -418,7 +418,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
           case "f" => "m"
           case "m" => "f"
         }
-        val sql = "select id, status, email, fname, sname, birth, start, finish  from Accounts a inner join Interests i on a.id = i.acc where sex = '" + sex + "' and status in ('свободны', 'все сложно') " + (if (list.nonEmpty) " AND " + list.mkString(" AND ") else "") + " and interests in (" + interests.mkString(", ") + ") group by id, status, email, fname, sname, birth, start, finish having count(1) > 0 order by status desc, count(1) desc, ABS(birth - " + a.birth.getOrElse(0) + ")  "
+        val sql = "select id, status, email, fname, sname, birth, start, finish  from Accounts a inner join Interests i on a.id = i.acc where sex = '" + sex + "' and status in ('свободны', 'всё сложно') " + (if (list.nonEmpty) " AND " + list.mkString(" AND ") else "") + " and interests in (" + interests.mkString(", ") + ") group by id, status, email, fname, sname, birth, start, finish having count(1) > 0 order by status desc, count(1) desc, ABS(birth - " + a.birth.getOrElse(0) + ")  "
         println("SQL: " + sql)
         /*val statmt = conn.createStatement()
         val rs = statmt.executeQuery(sql)

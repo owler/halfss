@@ -53,11 +53,12 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
   var interests = Array[String]()
   //val rootzip = new java.util.zip.ZipFile("/tmp/data/data.zip")
   val rootzip = new java.util.zip.ZipFile("./data.zip")
-  var now = 0L //Source.fromFile("/tmp/data/options.txt").getLines.toList.head.toLong * 1000
-  rootzip.entries.asScala.filter(_.getName.contains("options")).foreach(e =>
+  //var now = Source.fromFile("/tmp/data/options.txt").getLines.toList.head.toLong
+  var now = Source.fromFile("./options.txt").getLines.toList.head.toLong
+/*  rootzip.entries.asScala.filter(_.getName.contains("options")).foreach(e =>
     now = Source.fromInputStream(rootzip.getInputStream(e)).getLines.toList.head.toLong
-  )
-  println("data.zip timestamp " + new Date(now))
+  )*/
+  println("data.zip timestamp " + new Date(now * 1000))
 
 
   //val dbUrl = "jdbc:sqlite:/tmp/data/travel.db"

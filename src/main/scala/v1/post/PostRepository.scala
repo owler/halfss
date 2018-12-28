@@ -31,7 +31,7 @@ trait PostRepository {
 
   def getAccount(id: Int)(implicit mc: MarkerContext): Future[Option[Account]]
 
-  def recommend(id: Int)(implicit mc: MarkerContext): Future[List[Account]]
+  def recommend(id: Int, list: List[String])(implicit mc: MarkerContext): Future[List[Account]]
 
   def filter(keys: Iterable[String], list: Iterable[String], limit: Option[Int])(implicit mc: MarkerContext): Future[List[Account]]
 
@@ -409,12 +409,12 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
     }
   }
 
-  override def recommend(id: Int)(implicit mc: MarkerContext): Future[List[Account]] = {
+  override def recommend(id: Int, list: List[String])(implicit mc: MarkerContext): Future[List[Account]] = {
     getAccount(id).map {
       case None => List()
       case Some(a) =>
         val interests = getInterests(a.id)
-        val query = conn.prepareStatement("select id from Accounts a inner join Interests i on a.id = i.acc where sex = ? and status = ? and interests in (" +interests.mkString(", ")+") group by id having count(1) > 1 order by count(1) desc, ABS(birth - ?)  ")
+        val query = conn.prepareStatement("select id from Accounts a inner join Interests i on a.id = i.acc where sex = ? and status = ? " + (if (list.nonEmpty) " AND " + list.mkString(" AND ") else "") + " and interests in (" +interests.mkString(", ")+") group by id having count(1) > 1 order by count(1) desc, ABS(birth - ?)  ")
         query.setString(1, a.sex.get match {
           case "f" => "m"
           case "m" => "f"

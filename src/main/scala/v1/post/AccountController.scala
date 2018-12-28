@@ -189,7 +189,7 @@ class AccountController @Inject()(cc: PostControllerComponents)(implicit ec: Exe
   def recommend(id: Int): Action[AnyContent] = PostAction.async { implicit request =>
     val limit = request.getQueryString("limit").map(_.toInt)
     val list = request.queryString.filterNot(x => x._1 == "query_id" || x._1 == "limit").map(l => l._1 match {
-      case name if name == "country" || name == "city" => name + "='" + l._2 + "'"
+      case name if name == "country" || name == "city" => name + "='" + l._2.head + "'"
       case _ => null
     })
     postResourceHandler.recommend(id, list.toList).map {

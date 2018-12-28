@@ -414,22 +414,21 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
       case None => List()
       case Some(a) =>
         val interests = getInterests(a.id)
-        val query = conn.prepareStatement("select id from Accounts a inner join Interests i on a.id = i.acc where sex = ? and status = ? " + (if (list.nonEmpty) " AND " + list.mkString(" AND ") else "") + " and interests in (" +interests.mkString(", ")+") group by id having count(1) > 1 order by count(1) desc, ABS(birth - ?)  ")
-        query.setString(1, a.sex.get match {
+        val sex = a.sex.get match {
           case "f" => "m"
           case "m" => "f"
-        })
-        query.setString(2, "свободны")
-        //query.setArray(3, conn.createArrayOf("VARCHAR", List(1).asJava.toArray))
-        query.setInt(3, a.birth.getOrElse(0))
-        val rs = query.executeQuery()
+        }
+        val sql = "select id from Accounts a inner join Interests i on a.id = i.acc where sex = '" + sex + "' and status = 'свободны' " + (if (list.nonEmpty) " AND " + list.mkString(" AND ") else "") + " and interests in (" + interests.mkString(", ") + ") group by id having count(1) > 0 order by count(1) desc, ABS(birth - " + a.birth.getOrElse(0) + ")  "
+        println("SQL: " + sql)
+        val statmt = conn.createStatement()
+        val rs = statmt.executeQuery(sql)
         var listIds = List[Int]()
         while (rs.next()) {
           listIds = rs.getInt("id") :: listIds
         }
         getAccounts(Set("status", "fname", "sname", "birth", "start", "finish"), sqlAccounts + " (" + listIds.mkString(",") + ")") match {
           case None => List()
-          case Some(list) => list
+          case Some(l) => l
         }
     }
   }

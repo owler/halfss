@@ -30,6 +30,7 @@ trait PostRepository {
   def updateAccount(id: Int, data: AccountPost)(implicit mc: MarkerContext): Future[Result]
 
   def getAccount(id: Int)(implicit mc: MarkerContext): Future[Option[Account]]
+
   def recommend(id: Int)(implicit mc: MarkerContext): Future[List[Account]]
 
   def filter(keys: Iterable[String], list: Iterable[String], limit: Option[Int])(implicit mc: MarkerContext): Future[List[Account]]
@@ -55,9 +56,9 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
   val rootzip = new java.util.zip.ZipFile("./data.zip")
   //var now = Source.fromFile("/tmp/data/options.txt").getLines.toList.head.toLong
   var now = Source.fromFile("./options.txt").getLines.toList.head.toLong
-/*  rootzip.entries.asScala.filter(_.getName.contains("options")).foreach(e =>
-    now = Source.fromInputStream(rootzip.getInputStream(e)).getLines.toList.head.toLong
-  )*/
+  /*  rootzip.entries.asScala.filter(_.getName.contains("options")).foreach(e =>
+      now = Source.fromInputStream(rootzip.getInputStream(e)).getLines.toList.head.toLong
+    )*/
   println("data.zip timestamp " + new Date(now * 1000))
 
 
@@ -163,7 +164,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
               .append(l.id).append(",")
               .append(l.ts).append(")").toString))
           ).flatten.mkString(",")).append(";")
-      if(sb2.toString.contains("VALUES (")) {
+      if (sb2.toString.contains("VALUES (")) {
         statmt.execute(sb2.toString)
       }
 
@@ -173,7 +174,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
             new StringBuffer("(").append(account.id).append(",")
               .append(interests.indexOf(l)).append(")").toString))
           ).flatten.mkString(",")).append(";")
-      if(sb3.toString.contains("VALUES (")) {
+      if (sb3.toString.contains("VALUES (")) {
         statmt.execute(sb3.toString)
       }
     } catch {
@@ -195,6 +196,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
       case None => 0
     }
   }
+
   def deleteObj(id: Int, table: String): Unit = {
     val statmt = conn.createStatement()
     statmt.execute("DELETE from " + table + " WHERE id=" + id)
@@ -328,6 +330,18 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
     Option(inter.split(",").toList)
   }
 
+  def getInterests(id: Int): List[Int] = {
+    var list = List[Int]()
+    val sql = "SELECT * FROM Interests where acc = "
+    val statmt = conn.createStatement()
+    val rs = statmt.executeQuery(sql + id)
+    while (rs.next()) {
+      list = list :+ rs.getInt("interests")
+    }
+    statmt.close()
+    list
+  }
+
   override def getAccount(id: Int)(implicit mc: MarkerContext): Future[Option[Account]] = {
     Future {
       val statmt = conn.createStatement()
@@ -372,19 +386,19 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
     while (rs.next()) {
       val id = rs.getInt("id")
       list = list :+ Account(id,
-        if(columns.contains("joined")) Option(rs.getInt("joined")) else None,
-        if(columns.contains("status")) Option(rs.getString("status")) else None,
+        if (columns.contains("joined")) Option(rs.getInt("joined")) else None,
+        if (columns.contains("status")) Option(rs.getString("status")) else None,
         rs.getString("email"),
-        if(columns.contains("fname")) Option(rs.getString("fname")) else None,
-        if(columns.contains("sname")) Option(rs.getString("sname")) else None,
-        if(columns.contains("phone")) Option(rs.getString("phone")) else None,
-        if(columns.contains("sex")) Option(rs.getString("sex")) else None,
-        if(columns.contains("birth")) Option(rs.getInt("birth")) else None,
-        if(columns.contains("country")) Option(rs.getString("country")) else None,
-        if(columns.contains("city")) Option(rs.getString("city")) else None,
+        if (columns.contains("fname")) Option(rs.getString("fname")) else None,
+        if (columns.contains("sname")) Option(rs.getString("sname")) else None,
+        if (columns.contains("phone")) Option(rs.getString("phone")) else None,
+        if (columns.contains("sex")) Option(rs.getString("sex")) else None,
+        if (columns.contains("birth")) Option(rs.getInt("birth")) else None,
+        if (columns.contains("country")) Option(rs.getString("country")) else None,
+        if (columns.contains("city")) Option(rs.getString("city")) else None,
         Option(null),
         Option(null),
-        if(columns.exists(_ contains "start")) getPremium(rs) else None
+        if (columns.exists(_ contains "start")) getPremium(rs) else None
       )
     }
     statmt.close()
@@ -395,14 +409,16 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
     }
   }
 
-  import collection.JavaConverters._
   override def recommend(id: Int)(implicit mc: MarkerContext): Future[List[Account]] = {
     getAccount(id).map {
       case None => List()
       case Some(a) =>
-        println(a.id)
-        val query = conn.prepareStatement("select id from Accounts a inner join Interests i on a.id = i.acc where sex = ? and status = ? and interests in (1,2,3) group by id having count(1) > 1 order by count(1) desc, ABS(birth - ?)  ")
-        query.setString(1, a.sex.getOrElse("m"))
+        val interests = getInterests(a.id)
+        val query = conn.prepareStatement("select id from Accounts a inner join Interests i on a.id = i.acc where sex = ? and status = ? and interests in (" +interests.mkString(", ")+") group by id having count(1) > 1 order by count(1) desc, ABS(birth - ?)  ")
+        query.setString(1, a.sex.get match {
+          case "f" => "m"
+          case "m" => "f"
+        })
         query.setString(2, "свободны")
         //query.setArray(3, conn.createArrayOf("VARCHAR", List(1).asJava.toArray))
         query.setInt(3, a.birth.getOrElse(0))
@@ -419,10 +435,15 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
   }
 
   val full_columns = "id, joined, status, email, fname, sname, phone, sex, birth, country, city, start, finish"
+
   def sqlAccountWhere(columns: String) = "SELECT " + columns + " from Accounts "
+
   def sqlLikesWhere(columns: String) = "SELECT " + columns + " from Accounts a inner join Likes l on a.id = l.liker "
+
   def sqlInterestsWhere(columns: String) = "SELECT " + columns + " from Accounts a inner join Interests i on a.id = i.acc "
+
   def sqlInterestsLikesWhere(columns: String) = "SELECT " + columns + " from Accounts a inner join Interests i on a.id = i.acc inner join Likes l on a.id = l.liker "
+
   val sqlAccount = sqlAccountWhere(full_columns) + " WHERE id="
   val sqlAccounts = sqlAccountWhere(full_columns) + " WHERE id in "
 

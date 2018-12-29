@@ -113,10 +113,12 @@ class AccountController @Inject()(cc: PostControllerComponents)(implicit ec: Exe
   def filter: Action[AnyContent] = PostAction.async { implicit request =>
     val limit = request.getQueryString("limit").map(_.toInt)
     val list = request.queryString.filterNot(x => x._1 == "query_id" || x._1 == "limit").map(l => l._1 match {
+      case Eq(name) if name == "status" => (name, name + "=" + cc.postRepository.getStatuses().indexOf(l._2.head) + "")
       case Eq(name) => (name, name + "='" + l._2.head + "'")
       case Contains(name) if name == "likes" => ("likee", "likee in (" + l._2.head.split(",").toList.sorted.mkString(",") + ")")
       case Contains(name) if name == "interests" => (name, name + " in (" + cc.postRepository.wrapInterests(l._2.head.split(",").toList).sorted.mkString(",") + ")")
       case Any(name) if name == "interests" => (name, name + " in  (" + cc.postRepository.wrapInterests(l._2.head.split(",").toList).sorted.mkString(",") + ")")
+      case Neq(name) if name == "status" => (name, name + "!=" + cc.postRepository.getStatuses().indexOf(l._2.head) + "")
       case Neq(name) => (name, name + "!='" + l._2.head + "'")
       case Starts(name) => (name, name + " like '" + l._2.head + "%'")
       case Code(name) => (name, name + " like '%(" + l._2.head + ")%'")
@@ -188,14 +190,22 @@ class AccountController @Inject()(cc: PostControllerComponents)(implicit ec: Exe
 
   def recommend(id: Int): Action[AnyContent] = PostAction.async { implicit request =>
     val limit = request.getQueryString("limit").map(_.toInt)
-    val list = request.queryString.filterNot(x => x._1 == "query_id" || x._1 == "limit").map(l => l._1 match {
+    val params = request.queryString.filterNot(x => x._1 == "query_id" || x._1 == "limit").map(l => l._1 match {
       case name if name == "country" || name == "city" => name + "='" + l._2.head + "'"
       case _ => null
     })
-    postResourceHandler.recommend(id, list.toList, limit).map {
-      case l @ x::y => Ok(Json.obj("accounts" -> l))
-      case _ => NotFound
+
+    if (params.exists(_ == null)) {
+      Future {
+        BadRequest
+      }
+    } else {
+      postResourceHandler.recommend(id, params.toList, limit).map {
+        case l @ x::y => Ok(Json.obj("accounts" -> l))
+        case _ => NotFound
+      }
     }
+
   }
 
 

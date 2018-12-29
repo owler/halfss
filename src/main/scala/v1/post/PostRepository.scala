@@ -23,6 +23,7 @@ class PostExecutionContext @Inject()(actorSystem: ActorSystem) extends CustomExe
 trait PostRepository {
   def getNow: Long
 
+  def getStatuses(): Array[String]
   def wrapInterests(str: List[String]): List[Int]
 
   def createAccount(data: Account)(implicit mc: MarkerContext): Future[Result]
@@ -52,6 +53,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
 
   private val logger = Logger(this.getClass)
   var interests = Array[String]()
+  var statuses = Array("свободны","всё сложно","заняты")
   //val rootzip = new java.util.zip.ZipFile("/tmp/data/data.zip")
   val rootzip = new java.util.zip.ZipFile("./data.zip")
   //var now = Source.fromFile("/tmp/data/options.txt").getLines.toList.head.toLong
@@ -80,7 +82,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
   @throws[SQLException]
   def createDB(): Unit = {
     val statmt = conn.createStatement()
-    statmt.execute("CREATE TABLE if not exists Accounts (id INTEGER PRIMARY KEY, joined INTEGER, status text,email text, fname text, sname text, phone text, sex text, birth integer, country text, city text, start INTEGER, finish INTEGER);")
+    statmt.execute("CREATE TABLE if not exists Accounts (id INTEGER PRIMARY KEY, joined INTEGER, status INTEGER,email text, fname text, sname text, phone text, sex text, birth integer, country text, city text, start INTEGER, finish INTEGER);")
     statmt.execute("CREATE TABLE if not exists Likes (liker INTEGER, likee INTEGER, ts integer);")
     statmt.execute("CREATE TABLE if not exists Interests (acc INTEGER, interests INTEGER);")
     statmt.close()
@@ -91,6 +93,8 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
     str.map(s => interests.indexOf(s))
   }
 
+
+  override def getStatuses(): Array[String] = statuses
 
   def loadDb() = {
     rootzip.entries.asScala.
@@ -141,7 +145,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
           accounts.map(account =>
             new StringBuffer("(").append(account.id).append(",")
               .append(unwrapInt(account.joined)).append(",")
-              .append(unwrap(account.status)).append(",'")
+              .append(statuses.indexOf(account.status.getOrElse(""))).append(",'")
               .append(account.email).append("',")
               .append(unwrap(account.fname)).append(",")
               .append(unwrap(account.sname)).append(",")
@@ -349,7 +353,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
       val account = if (rs.next()) {
         Some(Account(rs.getInt("id"),
           Option(rs.getInt("joined")),
-          Option(rs.getString("status")),
+          Option(rs.getInt("status")).map(statuses(_)),
           rs.getString("email"),
           Option(rs.getString("fname")),
           Option(rs.getString("sname")),
@@ -387,7 +391,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
       val id = rs.getInt("id")
       list = list :+ Account(id,
         if (columns.contains("joined")) Option(rs.getInt("joined")) else None,
-        if (columns.contains("status")) Option(rs.getString("status")) else None,
+        if (columns.contains("status")) Option(rs.getInt("status")).map(statuses(_)) else None,
         rs.getString("email"),
         if (columns.contains("fname")) Option(rs.getString("fname")) else None,
         if (columns.contains("sname")) Option(rs.getString("sname")) else None,
@@ -418,7 +422,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
           case "f" => "m"
           case "m" => "f"
         }
-        val sql = "select id, status, email, fname, sname, birth, start, finish  from Accounts a inner join Interests i on a.id = i.acc where sex = '" + sex + "' and status in ('свободны', 'всё сложно') " + (if (list.nonEmpty) " AND " + list.mkString(" AND ") else "") + " and interests in (" + interests.mkString(", ") + ") group by id, status, email, fname, sname, birth, start, finish having count(1) > 0 order by status desc, count(1) desc, ABS(birth - " + a.birth.getOrElse(0) + ")  "
+        val sql = "select id, status, email, fname, sname, birth, start, finish  from Accounts a inner join Interests i on a.id = i.acc where sex = '" + sex + "' " + (if (list.nonEmpty) " AND " + list.mkString(" AND ") else "") + " and interests in (" + interests.mkString(", ") + ") group by id, status, email, fname, sname, birth, start, finish having count(1) > 0 order by status, count(1) desc, ABS(birth - " + a.birth.getOrElse(0) + ")  "
         println("SQL: " + sql)
          getAccounts(Set("id", "email", "status", "fname", "sname", "birth", "start", "finish"), sql) match {
           case None => List()
@@ -506,7 +510,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
     while (rs.next()) {
       list = list :+ Group(
         get(rs, "sex", key),
-        get(rs, "status", key),
+        get(rs, "status", key).map(x => statuses(x.toInt)),
         get(rs, "interests", key).map(x => interests(x.toInt)),
         get(rs, "country", key),
         get(rs, "city", key),

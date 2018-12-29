@@ -420,19 +420,15 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
         }
         val sql = "select id, status, email, fname, sname, birth, start, finish  from Accounts a inner join Interests i on a.id = i.acc where sex = '" + sex + "' and status in ('свободны', 'всё сложно') " + (if (list.nonEmpty) " AND " + list.mkString(" AND ") else "") + " and interests in (" + interests.mkString(", ") + ") group by id, status, email, fname, sname, birth, start, finish having count(1) > 0 order by status desc, count(1) desc, ABS(birth - " + a.birth.getOrElse(0) + ")  "
         println("SQL: " + sql)
-        /*val statmt = conn.createStatement()
-        val rs = statmt.executeQuery(sql)
-        var listIds = List[Int]()
-        while (rs.next()) {
-          listIds = rs.getInt("id") :: listIds
-        }*/
-        //getAccounts(Set("status", "fname", "sname", "birth", "start", "finish"), sqlAccounts + " (" + listIds.mkString(",") + ")") match {
-        getAccounts(Set("id", "email", "status", "fname", "sname", "birth", "start", "finish"), sql) match {
+         getAccounts(Set("id", "email", "status", "fname", "sname", "birth", "start", "finish"), sql) match {
           case None => List()
-          case Some(l) =>l.foreach(x => println(x.id)); (l.filter(_.premium.isDefined) ::: l.filter(_.premium.isEmpty)).take(limit.getOrElse(20))
+          case Some(l) =>
+            (l.filter(activePremium) ::: l.filter(!activePremium(_))).take(limit.getOrElse(20))
         }
     }
   }
+
+  private def activePremium(a: Account): Boolean = a.premium.isDefined && a.premium.get.start < getNow && a.premium.get.finish >= getNow
 
   val full_columns = "id, joined, status, email, fname, sname, phone, sex, birth, country, city, start, finish"
 

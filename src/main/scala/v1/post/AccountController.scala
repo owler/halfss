@@ -218,6 +218,7 @@ class AccountController @Inject()(cc: PostControllerComponents)(implicit ec: Exe
           case "likes" => "likee = " + l._2.head.toInt
           case "interests" => "interests = " + cc.postRepository.wrapInterests(List(l._2.head)).head
           case "birth" => val y = y_from_to(l._2.head.toInt); "birth >= " + y._1 + " AND birth < " + y._2
+          case "joined" => val y = y_from_to(l._2.head.toInt); "joined >= " + y._1 + " AND joined < " + y._2
           case name => name + "='" + l._2.head + "'"
         })
         postResourceHandler.group(keys, list, limit, order.getOrElse(true)).map(

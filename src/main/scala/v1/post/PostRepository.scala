@@ -155,7 +155,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
           accounts.map(account =>
             new StringBuffer("(").append(account.id).append(",")
               .append(unwrapInt(account.joined)).append(",")
-              .append(statuses.indexOf(account.status.getOrElse(""))).append(",'")
+              .append(unwrapInt(account.status.map(statuses.indexOf(_)))).append(",'")
               .append(account.email).append("',")
               .append(unwrap(account.fname)).append(",")
               .append(unwrap(account.sname)).append(",")
@@ -499,7 +499,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
         (if (list.exists(_ contains "likee =")) " INNER JOIN Likes l on a.id = l.liker " else "") +
         (if (list.nonEmpty) " WHERE " + list.mkString(" AND ") else "") +
         " GROUP BY " + keys.mkString(",") +
-        (if (order) " ORDER BY c desc," + keys.mkString(" desc, ") + " desc " else " ORDER BY c," + keys.mkString(","))
+        (if (order) " ORDER BY c desc," + keys.mkString(" desc, ") + " desc " else " ORDER BY c," + keys.mkString(",")) +
       (limit match {
         case Some(i) => " LIMIT " + i
         case None => ""

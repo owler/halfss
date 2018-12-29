@@ -470,12 +470,13 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
           val sex = a.sex.get
           //val sql = "select id, status, email, fname, sname, birth, start, finish from Accounts a inner join (\nselect id, SUM(1/ABS(AVG(l.ts) - my.ts_avg)) as ts_diff  from Accounts a inner join Likes l on a.id = l.liker \ninner join (select liker, likee, AVG(ts) as ts_avg from Likes where liker="+id+" group by liker, likee) my on l.likee = my.likee \nwhere sex = '"+sex+"' GROUP BY id ) ts_select on a.id = ts_select.id ORDER BY ts_diff desc"
           //val sql = "select a2.id, status, email, fname, sname, birth, start, finish from Accounts a2 inner join (\nselect id from Accounts a inner join Likes l on a.id = l.liker \ninner join (select liker, likee, AVG(ts) as ts_avg from Likes where liker="+id+" group by liker, likee) my on l.likee = my.likee \nwhere sex = '"+sex+"' GROUP BY id ) ts_select on a2.id = ts_select.id "
-          val sql = """select a2.id, status, email, fname, sname, birth, start, finish from Accounts a2 inner join (
+          val sql = """select a3.id, status, email, fname, sname, birth, start, finish from Accounts a3 inner join
+             (select a2.id, l2.likee, SUM(1/ts_diff) as ord from Accounts a2 inner join (
 select id, l.likee, ABS(AVG(l.ts) - my.ts_avg) as ts_diff from Accounts a inner join Likes l on a.id = l.liker
 inner join (select liker, likee, AVG(ts) as ts_avg from Likes where liker="""+id+""" group by liker, likee) my on l.likee = my.likee
 where sex = '"""+sex+"""' """ + (if (list.nonEmpty) " AND " + list.mkString(" AND ") else "") + """ GROUP BY id, l.likee ) ts_select on a2.id = ts_select.id
 inner join Likes l2 on a2.id = l2.liker
-GROUP BY a2.id, status, email, fname, sname, birth, start, finish ORDER BY SUM(1/(ts_diff+1)) desc"""
+GROUP BY a2.id, l2.likee) t_similars on a3.id = t_similars.likee where t_similars.likee not in("""+likees.mkString(",")+""") ORDER BY t_similars.ord desc"""
           println("SQL: " + sql)
           getAccounts(Set("id", "email", "status", "fname", "sname", "birth", "start", "finish"), sql) match {
             case None => List()

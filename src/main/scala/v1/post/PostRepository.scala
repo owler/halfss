@@ -118,10 +118,19 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
   }
 
   def createIndex(): Unit = {
-    val u2e_Idx = "CREATE UNIQUE INDEX idx_account_email ON Accounts (email);"
+    val u2e_Idx_email = "CREATE UNIQUE INDEX idx_account_email ON Accounts (email);"
+    val u2e_Idx_status = "CREATE INDEX idx_account_status ON Accounts (status);"
+    val u2e_Idx_interests = "CREATE INDEX idx_interests ON Interests (acc, interests);"
+    val u2e_Idx_likes = "CREATE INDEX idx_likes ON Likes (liker, likee);"
     val statmt = conn.createStatement()
-    statmt.execute(u2e_Idx)
-    System.out.println("Индекс u2e_Idx создан.")
+    statmt.execute(u2e_Idx_email)
+    System.out.println("Индекс u2e_Idx_email создан.")
+    statmt.execute(u2e_Idx_status)
+    System.out.println("Индекс u2e_Idx_status создан.")
+    statmt.execute(u2e_Idx_interests)
+    System.out.println("Индекс u2e_Idx_interests создан.")
+    statmt.execute(u2e_Idx_likes)
+    System.out.println("Индекс u2e_Idx_likes создан.")
     statmt.close()
   }
 

@@ -193,7 +193,7 @@ class AccountController @Inject()(cc: PostControllerComponents)(implicit ec: Exe
       case _ => null
     })
     postResourceHandler.recommend(id, list.toList, limit).map {
-      case l @ x::y => Ok(Json.toJson(l))
+      case l @ x::y => Ok(Json.obj("accounts" -> l))
       case _ => NotFound
     }
   }

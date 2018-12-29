@@ -200,10 +200,9 @@ class AccountController @Inject()(cc: PostControllerComponents)(implicit ec: Exe
         BadRequest
       }
     } else {
-      postResourceHandler.recommend(id, params.toList, limit).map {
-        case l @ x::y => Ok(Json.obj("accounts" -> l))
-        case _ => NotFound
-      }
+      postResourceHandler.recommend(id, params.toList, limit).map(
+        l => Ok(Json.obj("accounts" -> l))
+      )
     }
 
   }

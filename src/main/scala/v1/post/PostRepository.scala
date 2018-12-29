@@ -24,6 +24,7 @@ trait PostRepository {
   def getNow: Long
 
   def getStatuses(): Array[String]
+
   def wrapInterests(str: List[String]): List[Int]
 
   def createAccount(data: Account)(implicit mc: MarkerContext): Future[Result]
@@ -53,7 +54,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
 
   private val logger = Logger(this.getClass)
   var interests = Array[String]()
-  var statuses = Array("свободны","всё сложно","заняты")
+  var statuses = Array("свободны", "всё сложно", "заняты")
   //val rootzip = new java.util.zip.ZipFile("/tmp/data/data.zip")
   val rootzip = new java.util.zip.ZipFile("./data.zip")
   //var now = Source.fromFile("/tmp/data/options.txt").getLines.toList.head.toLong
@@ -418,16 +419,20 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
       case None => List()
       case Some(a) =>
         val interests = getInterests(a.id)
-        val sex = a.sex.get match {
-          case "f" => "m"
-          case "m" => "f"
-        }
-        val sql = "select id, status, email, fname, sname, birth, start, finish  from Accounts a inner join Interests i on a.id = i.acc where sex = '" + sex + "' " + (if (list.nonEmpty) " AND " + list.mkString(" AND ") else "") + " and interests in (" + interests.mkString(", ") + ") group by id, status, email, fname, sname, birth, start, finish having count(1) > 0 order by status, count(1) desc, ABS(birth - " + a.birth.getOrElse(0) + ")  "
-        println("SQL: " + sql)
-         getAccounts(Set("id", "email", "status", "fname", "sname", "birth", "start", "finish"), sql) match {
-          case None => List()
-          case Some(l) =>
-            (l.filter(activePremium) ::: l.filter(!activePremium(_))).take(limit.getOrElse(20))
+        if (interests.isEmpty) {
+          List()
+        } else {
+          val sex = a.sex.get match {
+            case "f" => "m"
+            case "m" => "f"
+          }
+          val sql = "select id, status, email, fname, sname, birth, start, finish  from Accounts a inner join Interests i on a.id = i.acc where sex = '" + sex + "' " + (if (list.nonEmpty) " AND " + list.mkString(" AND ") else "") + " and interests in (" + interests.mkString(", ") + ") group by id, status, email, fname, sname, birth, start, finish having count(1) > 0 order by status, count(1) desc, ABS(birth - " + a.birth.getOrElse(0) + ")  "
+          println("SQL: " + sql)
+          getAccounts(Set("id", "email", "status", "fname", "sname", "birth", "start", "finish"), sql) match {
+            case None => List()
+            case Some(l) =>
+              (l.filter(activePremium) ::: l.filter(!activePremium(_))).take(limit.getOrElse(20))
+          }
         }
     }
   }

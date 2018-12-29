@@ -96,6 +96,10 @@ class PostResourceHandler @Inject()(
     postRepository.recommend(id, list, limit)
   }
 
+  def suggest(id: Int, list: List[String], limit: Option[Int])(implicit mc: MarkerContext): Future[List[Account]] = {
+    postRepository.suggest(id, list, limit)
+  }
+
 
   def relativeTimeStamp(age: Int): Long = {
     val c = new GregorianCalendar()

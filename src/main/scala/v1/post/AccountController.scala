@@ -192,7 +192,7 @@ class AccountController @Inject()(cc: PostControllerComponents)(implicit ec: Exe
       case name if name == "country" || name == "city" => name + "='" + l._2.head + "'"
       case _ => null
     })
-    postResourceHandler.recommend(id, list.toList).map {
+    postResourceHandler.recommend(id, list.toList, limit).map {
       case l @ x::y => Ok(Json.toJson(l))
       case _ => NotFound
     }

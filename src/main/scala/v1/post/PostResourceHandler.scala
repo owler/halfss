@@ -92,8 +92,8 @@ class PostResourceHandler @Inject()(
     postRepository.getAccount(id)
   }
 
- def recommend(id: Int, list: List[String])(implicit mc: MarkerContext): Future[List[Account]] = {
-    postRepository.recommend(id, list)
+ def recommend(id: Int, list: List[String], limit: Option[Int])(implicit mc: MarkerContext): Future[List[Account]] = {
+    postRepository.recommend(id, list, limit)
   }
 
 

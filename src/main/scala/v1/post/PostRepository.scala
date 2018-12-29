@@ -31,7 +31,7 @@ trait PostRepository {
 
   def getAccount(id: Int)(implicit mc: MarkerContext): Future[Option[Account]]
 
-  def recommend(id: Int, list: List[String])(implicit mc: MarkerContext): Future[List[Account]]
+  def recommend(id: Int, list: List[String], limit: Option[Int])(implicit mc: MarkerContext): Future[List[Account]]
 
   def filter(keys: Iterable[String], list: Iterable[String], limit: Option[Int])(implicit mc: MarkerContext): Future[List[Account]]
 
@@ -409,7 +409,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
     }
   }
 
-  override def recommend(id: Int, list: List[String])(implicit mc: MarkerContext): Future[List[Account]] = {
+  override def recommend(id: Int, list: List[String], limit: Option[Int])(implicit mc: MarkerContext): Future[List[Account]] = {
     getAccount(id).map {
       case None => List()
       case Some(a) =>
@@ -429,7 +429,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
         //getAccounts(Set("status", "fname", "sname", "birth", "start", "finish"), sqlAccounts + " (" + listIds.mkString(",") + ")") match {
         getAccounts(Set("id", "email", "status", "fname", "sname", "birth", "start", "finish"), sql) match {
           case None => List()
-          case Some(l) => l
+          case Some(l) =>l.foreach(x => println(x.id)); (l.filter(_.premium.isDefined) ::: l.filter(_.premium.isEmpty)).take(limit.getOrElse(20))
         }
     }
   }

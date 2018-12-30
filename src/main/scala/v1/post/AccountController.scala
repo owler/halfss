@@ -214,6 +214,7 @@ class AccountController @Inject()(cc: PostControllerComponents)(implicit ec: Exe
   }
 
   import scala.util.{Try, Success, Failure}
+  val validKeys= List("sex", "status", "interests", "country", "city")
   def group: Action[AnyContent] = PostAction.async { implicit request =>
     val limit = Try(request.getQueryString("limit").map(_.toInt))
     val orderS = Try(request.getQueryString("order").map(_.toInt))
@@ -226,6 +227,7 @@ class AccountController @Inject()(cc: PostControllerComponents)(implicit ec: Exe
     val order = orderS.get.map(_ == -1)
     request.getQueryString("keys").map(_.split(",")) match {
       case Some(keys) => {
+        if(keys.forall(s => validKeys.contains(s))) {
         val list = request.queryString.filterNot(x => x._1 == "query_id" || x._1 == "limit" ||
           x._1 == "keys" || x._1 == "order").map(l => l._1 match {
           case "likes" => "likee = " + l._2.head.toInt
@@ -236,7 +238,11 @@ class AccountController @Inject()(cc: PostControllerComponents)(implicit ec: Exe
         })
         postResourceHandler.group(keys, list, limit.get, order.getOrElse(true)).map(
           l => Ok(Json.obj("groups" -> l))
-        )
+        )} else {
+          Future {
+            BadRequest
+          }
+        }
       }
       case None => Future {
         BadRequest

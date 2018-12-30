@@ -187,7 +187,7 @@ class AccountController @Inject()(cc: PostControllerComponents)(implicit ec: Exe
       }
     } else {
       postResourceHandler.suggest(id, params.toList, limit).map {
-        case None => BadRequest
+        case None => NotFound
         case Some(v) => Ok(Json.obj("accounts" -> v))
       }
     }
@@ -206,7 +206,7 @@ class AccountController @Inject()(cc: PostControllerComponents)(implicit ec: Exe
       }
     } else {
       postResourceHandler.recommend(id, params.toList, limit).map {
-        case None => BadRequest
+        case None => NotFound
         case Some(v) => Ok(Json.obj("accounts" -> v))
       }
     }

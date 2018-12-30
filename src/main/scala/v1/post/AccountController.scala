@@ -216,14 +216,14 @@ class AccountController @Inject()(cc: PostControllerComponents)(implicit ec: Exe
   import scala.util.{Try, Success, Failure}
   def group: Action[AnyContent] = PostAction.async { implicit request =>
     val limit = Try(request.getQueryString("limit").map(_.toInt))
-    val orderS = request.getQueryString("order")
-    if(orderS != "-1" || orderS != "1" || limit.isFailure) {
+    val orderS = Try(request.getQueryString("order").map(_.toInt))
+    if(orderS.isFailure || limit.isFailure || (orderS.get.get != -1 && orderS.get.get != 1)) {
       Future {
         BadRequest
       }
     } else {
 
-    val order = orderS.map(_.toInt).map(_ == -1)
+    val order = orderS.get.map(_ == -1)
     request.getQueryString("keys").map(_.split(",")) match {
       case Some(keys) => {
         val list = request.queryString.filterNot(x => x._1 == "query_id" || x._1 == "limit" ||

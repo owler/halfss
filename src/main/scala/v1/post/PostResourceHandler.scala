@@ -96,7 +96,7 @@ class PostResourceHandler @Inject()(
     postRepository.recommend(id, list, limit)
   }
 
-  def suggest(id: Int, list: List[String], limit: Option[Int])(implicit mc: MarkerContext): Future[List[Account]] = {
+  def suggest(id: Int, list: List[String], limit: Option[Int])(implicit mc: MarkerContext): Future[Option[List[Account]]] = {
     postRepository.suggest(id, list, limit)
   }
 

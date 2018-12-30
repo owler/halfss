@@ -34,7 +34,7 @@ trait PostRepository {
   def getAccount(id: Int)(implicit mc: MarkerContext): Future[Option[Account]]
 
   def recommend(id: Int, list: List[String], limit: Option[Int])(implicit mc: MarkerContext): Future[List[Account]]
-  def suggest(id: Int, list: List[String], limit: Option[Int])(implicit mc: MarkerContext): Future[List[Account]]
+  def suggest(id: Int, list: List[String], limit: Option[Int])(implicit mc: MarkerContext): Future[Option[List[Account]]]
 
   def filter(keys: Iterable[String], list: Iterable[String], limit: Option[Int])(implicit mc: MarkerContext): Future[List[Account]]
 
@@ -459,13 +459,13 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
     }
   }
 
- override def suggest(id: Int, list: List[String], limit: Option[Int])(implicit mc: MarkerContext): Future[List[Account]] = {
+ override def suggest(id: Int, list: List[String], limit: Option[Int])(implicit mc: MarkerContext): Future[Option[List[Account]]] = {
     getAccount(id).map {
-      case None => List()
+      case None => None
       case Some(a) =>
         val likees = getLikees(a.id)
         if (likees.isEmpty) {
-          List()
+          Some(List())
         } else {
           val sex = a.sex.get
           //val sql = "select id, status, email, fname, sname, birth, start, finish from Accounts a inner join (\nselect id, SUM(1/ABS(AVG(l.ts) - my.ts_avg)) as ts_diff  from Accounts a inner join Likes l on a.id = l.liker \ninner join (select liker, likee, AVG(ts) as ts_avg from Likes where liker="+id+" group by liker, likee) my on l.likee = my.likee \nwhere sex = '"+sex+"' GROUP BY id ) ts_select on a.id = ts_select.id ORDER BY ts_diff desc"
@@ -483,8 +483,8 @@ GROUP BY a2.id) st1 inner join Likes st2 on st1.id=st2.liker group by st1.id, st
           })
           println("SQL: " + sql)
           getAccounts(Set("id", "email", "status", "fname", "sname", "birth", "start", "finish"), sql) match {
-            case None => List()
-            case Some(l) =>l
+            case None => Some(List())
+            case Some(l) => Some(l)
           }
         }
     }

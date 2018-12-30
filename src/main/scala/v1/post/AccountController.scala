@@ -186,9 +186,10 @@ class AccountController @Inject()(cc: PostControllerComponents)(implicit ec: Exe
         BadRequest
       }
     } else {
-      postResourceHandler.suggest(id, params.toList, limit).map(
-        l => Ok(Json.obj("accounts" -> l))
-      )
+      postResourceHandler.suggest(id, params.toList, limit).map {
+        case None => BadRequest
+        case Some(v) => Ok(Json.obj("accounts" -> v))
+      }
     }
   }
 

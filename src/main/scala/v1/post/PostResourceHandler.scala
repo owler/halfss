@@ -28,6 +28,7 @@ class PostResourceHandler @Inject()(
       .map(u => u) match {
       case Success(u) if verify(u) => postRepository.createAccount(u)
       case Failure(e) =>
+        println(e)
         Future {
           Results.BadRequest
         }
@@ -76,8 +77,8 @@ class PostResourceHandler @Inject()(
 
   def verify(u:  Account): Boolean = {
     u.id >= 0 && u.email.length <= 100 &&
-      u.fname.map(_.length <= 50).getOrElse(true) &&
-      u.sname.map(_.length <= 50).getOrElse(true) && (u.sex == "m" || u.sex == "f")
+      u.fname.forall(_.length <= 50) &&
+      u.sname.forall(_.length <= 50) && (u.sex == Option("m") || u.sex == Option("f"))
   }
 
   def filter(keys: Iterable[String], list: Iterable[String], limit: Option[Int])(implicit mc: MarkerContext): Future[List[Account]] = {

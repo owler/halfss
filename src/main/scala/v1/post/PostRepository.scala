@@ -227,7 +227,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
           case None =>
             if (!isEmailExists(data.email)) {
               writeAccounts(List(data))
-              Results.Ok(Json.obj())
+              Results.Created(Json.obj())
             } else {
               Results.BadRequest
             }

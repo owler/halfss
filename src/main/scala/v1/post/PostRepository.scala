@@ -309,7 +309,7 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
               )
               deleteObj(updatedAccount.id, "Accounts")
               writeAccounts(List(updatedAccount))
-              Results.Ok(Json.obj())
+              Results.Accepted(Json.obj())
             }
         }
       }

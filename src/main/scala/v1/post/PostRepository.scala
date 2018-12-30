@@ -33,7 +33,7 @@ trait PostRepository {
 
   def getAccount(id: Int)(implicit mc: MarkerContext): Future[Option[Account]]
 
-  def recommend(id: Int, list: List[String], limit: Option[Int])(implicit mc: MarkerContext): Future[List[Account]]
+  def recommend(id: Int, list: List[String], limit: Option[Int])(implicit mc: MarkerContext): Future[Option[List[Account]]]
   def suggest(id: Int, list: List[String], limit: Option[Int])(implicit mc: MarkerContext): Future[Option[List[Account]]]
 
   def filter(keys: Iterable[String], list: Iterable[String], limit: Option[Int])(implicit mc: MarkerContext): Future[List[Account]]
@@ -436,13 +436,13 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
     }
   }
 
-  override def recommend(id: Int, list: List[String], limit: Option[Int])(implicit mc: MarkerContext): Future[List[Account]] = {
+  override def recommend(id: Int, list: List[String], limit: Option[Int])(implicit mc: MarkerContext): Future[Option[List[Account]]] = {
     getAccount(id).map {
-      case None => List()
+      case None => None
       case Some(a) =>
         val interests = getInterests(a.id)
         if (interests.isEmpty) {
-          List()
+          Some(List())
         } else {
           val sex = a.sex.get match {
             case "f" => "m"
@@ -451,9 +451,9 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
           val sql = "select id, status, email, fname, sname, birth, start, finish  from Accounts a inner join Interests i on a.id = i.acc where sex = '" + sex + "' " + (if (list.nonEmpty) " AND " + list.mkString(" AND ") else "") + " and interests in (" + interests.mkString(", ") + ") group by id, status, email, fname, sname, birth, start, finish having count(1) > 0 order by status, count(1) desc, ABS(birth - " + a.birth.getOrElse(0) + ")  "
           println("SQL: " + sql)
           getAccounts(Set("id", "email", "status", "fname", "sname", "birth", "start", "finish"), sql) match {
-            case None => List()
+            case None => Some(List())
             case Some(l) =>
-              (l.filter(activePremium) ::: l.filter(!activePremium(_))).take(limit.getOrElse(20))
+              Some((l.filter(activePremium) ::: l.filter(!activePremium(_))).take(limit.getOrElse(20)))
           }
         }
     }

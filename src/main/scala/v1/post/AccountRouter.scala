@@ -37,6 +37,9 @@ class AccountRouter @Inject()(controller: AccountController) extends SimpleRoute
     case POST(p"/new") =>
       controller.create
 
+    case POST(p"/likes") =>
+      controller.likes
+
   }
 
 }

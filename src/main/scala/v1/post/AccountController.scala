@@ -164,6 +164,15 @@ class AccountController @Inject()(cc: PostControllerComponents)(implicit ec: Exe
     }
   }
 
+  def likes: Action[AnyContent] = PostAction.async { implicit request =>
+    request.body.asJson match {
+      case None => Future {
+        BadRequest
+      }
+      case Some(json) => postResourceHandler.updateLikes(json)
+    }
+  }
+
   def update(id: Int): Action[AnyContent] = PostAction.async { implicit request =>
     request.body.asJson match {
       case None => Future {

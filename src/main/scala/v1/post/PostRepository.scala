@@ -28,6 +28,7 @@ trait PostRepository {
   def wrapInterests(str: List[String]): List[Int]
 
   def createAccount(data: Account)(implicit mc: MarkerContext): Future[Result]
+  def updateLikes(data: LikesPost)(implicit mc: MarkerContext): Future[Result]
 
   def updateAccount(id: Int, data: AccountPost)(implicit mc: MarkerContext): Future[Result]
 
@@ -212,9 +213,9 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
     }
   }
 
-  def deleteObj(id: Int, table: String): Unit = {
+  def deleteObj(name: String, id: Int, table: String): Unit = {
     val statmt = conn.createStatement()
-    statmt.execute("DELETE from " + table + " WHERE id=" + id)
+    statmt.execute("DELETE from " + table + " WHERE " + name + "=" + id)
     statmt.close()
   }
 
@@ -243,6 +244,23 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
       case Some(map) => true
     }
 
+  }
+
+  override def updateLikes(data: LikesPost)(implicit mc: MarkerContext): Future[Result] = {
+    Future {
+      val sb2 = new StringBuffer("INSERT INTO Likes (liker, likee, ts) VALUES ")
+        .append(
+          data.likes.map(l =>
+            new StringBuffer("(").append(l.liker).append(",")
+              .append(l.likee).append(",")
+              .append(l.ts).append(")").toString).mkString(",")).append(";")
+      if (sb2.toString.contains("VALUES (")) {
+        val statmt = conn.createStatement()
+        statmt.execute(sb2.toString)
+        conn.close()
+      }
+      Results.Accepted
+    }
   }
 
   override def updateAccount(id: Int, data: AccountPost)(implicit mc: MarkerContext): Future[Result] = {
@@ -307,7 +325,10 @@ class PostRepositoryImpl @Inject()()(implicit ec: PostExecutionContext) extends 
                   case None => account.premium
                 }
               )
-              deleteObj(updatedAccount.id, "Accounts")
+              deleteObj("id", updatedAccount.id, "Accounts")
+              deleteObj("liker", updatedAccount.id, "Likes")
+              deleteObj("acc", updatedAccount.id, "Interests")
+
               writeAccounts(List(updatedAccount))
               Results.Accepted(Json.obj())
             }

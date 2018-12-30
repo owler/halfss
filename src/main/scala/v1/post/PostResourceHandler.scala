@@ -38,6 +38,23 @@ class PostResourceHandler @Inject()(
     }
   }
 
+  def updateLikes(json: JsValue)(implicit mc: MarkerContext): Future[Result] = {
+    Try {
+      Json.fromJson[LikesPost](json).get
+    }
+      .map(u => u) match {
+      case Success(u) if true => postRepository.updateLikes(u)
+      case Failure(e) =>
+        println(e)
+        Future {
+          Results.BadRequest
+        }
+      case _ => Future {
+        Results.BadRequest
+      }
+    }
+  }
+
 
   def updateAccount(id: Int, json: JsValue)(implicit mc: MarkerContext): Future[Result] = {
     if (isNullField(json, List("email", "sex", "birth"))) {
@@ -53,10 +70,12 @@ class PostResourceHandler @Inject()(
         case Success(userPost) if userPost.verify =>
           postRepository.updateAccount(id, userPost)
         case Failure(e) =>
+          println(e)
           Future {
             Results.BadRequest
           }
         case _ =>
+          println("failed verify for id = " + id)
           Future {
             Results.BadRequest
           }

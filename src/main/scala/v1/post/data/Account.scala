@@ -20,8 +20,20 @@ final case class Like(id: Int, ts: Int)
 object Like {
   implicit val writes = Json.writes[Like]
   implicit val reads = Json.reads[Like]
-
 }
+
+final case class LikePost(liker: Int, likee: Int, ts: Int)
+object LikePost {
+  implicit val writes = Json.writes[LikePost]
+  implicit val reads = Json.reads[LikePost]
+}
+
+final case class LikesPost(likes: List[LikePost])
+object LikesPost {
+  implicit val writes = Json.writes[LikesPost]
+  implicit val reads = Json.reads[LikesPost]
+}
+
 final case class Premium(start: Int, finish: Int)
 object Premium {
   implicit val writes = Json.writes[Premium]

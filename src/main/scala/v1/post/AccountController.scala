@@ -213,10 +213,17 @@ class AccountController @Inject()(cc: PostControllerComponents)(implicit ec: Exe
 
   }
 
-
+  import scala.util.{Try, Success, Failure}
   def group: Action[AnyContent] = PostAction.async { implicit request =>
-    val limit = request.getQueryString("limit").map(_.toInt)
-    val order = request.getQueryString("order").map(_.toInt).map(_ == -1)
+    val limit = Try(request.getQueryString("limit").map(_.toInt))
+    val orderS = request.getQueryString("order")
+    if(orderS != "-1" || orderS != "1" || limit.isFailure) {
+      Future {
+        BadRequest
+      }
+    } else {
+
+    val order = orderS.map(_.toInt).map(_ == -1)
     request.getQueryString("keys").map(_.split(",")) match {
       case Some(keys) => {
         val list = request.queryString.filterNot(x => x._1 == "query_id" || x._1 == "limit" ||
@@ -227,14 +234,14 @@ class AccountController @Inject()(cc: PostControllerComponents)(implicit ec: Exe
           case "joined" => val y = y_from_to(l._2.head.toInt); "joined >= " + y._1 + " AND joined < " + y._2
           case name => name + "='" + l._2.head + "'"
         })
-        postResourceHandler.group(keys, list, limit, order.getOrElse(true)).map(
+        postResourceHandler.group(keys, list, limit.get, order.getOrElse(true)).map(
           l => Ok(Json.obj("groups" -> l))
         )
       }
       case None => Future {
         BadRequest
       }
-    }
+    }}
   }
 
   def y_from_to(year: Int) = {

@@ -476,11 +476,15 @@ select id, l.likee, ABS(AVG(l.ts) - my.ts_avg) as ts_diff from Accounts a inner 
 inner join (select liker, likee, AVG(ts) as ts_avg from Likes where liker="""+id+""" group by liker, likee) my on l.likee = my.likee
 where id!="""+id+""" AND sex = '"""+sex+"""' """ + (if (list.nonEmpty) " AND " + list.mkString(" AND ") else "") + """ GROUP BY id, l.likee ) ts_select on a2.id = ts_select.id
 inner join Likes l2 on a2.id = l2.liker
-GROUP BY a2.id) st1 inner join Likes st2 on st1.id=st2.liker group by st1.id, st2.likee, ord) t_similars on a3.id = t_similars.likee where t_similars.likee not in("""+likees.mkString(",")+""") ORDER BY t_similars.ord desc, a3.id desc"""
+GROUP BY a2.id) st1 inner join Likes st2 on st1.id=st2.liker group by st1.id, st2.likee, ord) t_similars on a3.id = t_similars.likee where t_similars.likee not in("""+likees.mkString(",")+""") ORDER BY t_similars.ord desc, a3.id desc""" +
+            (limit match {
+            case Some(i) => " LIMIT " + i
+            case None => ""
+          })
           println("SQL: " + sql)
           getAccounts(Set("id", "email", "status", "fname", "sname", "birth", "start", "finish"), sql) match {
             case None => List()
-            case Some(l) =>l.take(limit.getOrElse(20))
+            case Some(l) =>l
           }
         }
     }
